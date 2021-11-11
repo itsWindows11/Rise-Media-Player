@@ -17,11 +17,11 @@ namespace RMP.App.Settings
             NavigationCacheMode = NavigationCacheMode.Enabled;
 
             VersionData.RequestedOperation = DataPackageOperation.Copy;
-            VersionData.SetText("Pre-Alpha 2 - v0.0.11.0");
+            VersionData.SetText("Pre-Alpha 2+ - v0.0.12.0");
         }
 
         private async void NavigationExpander_Click(object sender, RoutedEventArgs e)
-            => await FileHelpers.LaunchURIAsync(URLs.License);
+            => _ = await URLs.License.LaunchAsync();
 
         private void CommandBarButton_Click(object sender, RoutedEventArgs e)
         {
@@ -30,7 +30,7 @@ namespace RMP.App.Settings
             {
                 case "Insider":
                     Frame.Navigate(typeof(InsiderPage));
-                    SettingsDialog.Current.Breadcrumbs.Add
+                    SettingsDialogContainer.Breadcrumbs.Add
                         (ResourceLoaders.SidebarLoader.GetString("Ins"));
                     break;
 
@@ -41,8 +41,6 @@ namespace RMP.App.Settings
         }
 
         private void VTip_CloseButtonClick(Microsoft.UI.Xaml.Controls.TeachingTip sender, object args)
-        {
-            Clipboard.SetContent(VersionData);
-        }
+            => Clipboard.SetContent(VersionData);
     }
 }

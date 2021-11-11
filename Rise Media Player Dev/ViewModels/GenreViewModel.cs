@@ -105,7 +105,7 @@ namespace RMP.App.ViewModels
                 App.MViewModel.Genres.Add(this);
             }
 
-            await App.Repository.Genres.UpsertAsync(Model).ConfigureAwait(false);
+            await App.Repository.Genres.QueueUpsertAsync(Model);
         }
     }
 }

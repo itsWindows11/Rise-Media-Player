@@ -13,12 +13,13 @@ namespace RMP.App.Settings
         }
 
         private async void Button_Click(object sender, RoutedEventArgs e)
-            => await FileHelpers.LaunchURIAsync(URLs.Insider);
+            => _ = await URLs.Insider.LaunchAsync();
 
         private void NavigationExpander_Click(object sender, RoutedEventArgs e)
         {
             Frame.Navigate(typeof(InsiderWallpapers));
-            SettingsDialog.Current.Breadcrumbs.Add(ResourceLoaders.SidebarLoader.GetString("Walls"));
+            SettingsDialogContainer.Breadcrumbs.
+                Add(ResourceLoaders.SidebarLoader.GetString("Walls"));
         }
     }
 }

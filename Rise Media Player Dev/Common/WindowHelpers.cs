@@ -1,5 +1,4 @@
 ﻿using RMP.App.UserControls;
-using RMP.App.Views;
 using System;
 using System.Threading.Tasks;
 using Windows.ApplicationModel.Core;
@@ -14,12 +13,12 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Hosting;
 using Windows.UI.Xaml.Media;
 
-namespace RMP.App.Windows
+namespace RMP.App.Views
 {
-    public class GeneralControl
+    public static class WindowExtensions
     {
         /// <summary>
-        /// Creates a new window with ApplicationView.
+        /// Opens a page inside a new window with <see cref="ApplicationView"/>.
         /// </summary>
         /// <param name="page">The window frame's initial page.</param>
         /// <param name="viewMode">Default window view mode.</param>
@@ -27,7 +26,7 @@ namespace RMP.App.Windows
         /// <param name="minHeight">Minimum window height.</param>
         /// <param name="parameter">Parameters for the frame.</param>
         /// <returns>Whether or not the window opened successfully.</returns>
-        public static async Task<bool> CreateWindow(Type page, ApplicationViewMode viewMode,
+        public static async Task<bool> OpenInWindowAsync(this Type page, ApplicationViewMode viewMode,
             int minWidth, int minHeight, object parameter = null)
         {
             CoreApplicationView window = CoreApplication.CreateNewView();
@@ -53,13 +52,15 @@ namespace RMP.App.Windows
         }
 
         /// <summary>
-        /// Creates a new window with AppWindow.
+        /// Opens a page inside a new window with <see cref="AppWindow"/>.
         /// </summary>
         /// <param name="page">The window frame's initial page.</param>
         /// <param name="viewMode">Default window view mode.</param>
+        /// <param name="minWidth">Minimum window width.</param>
+        /// <param name="minHeight">Minimum window height.</param>
         /// <param name="parameter">Parameters for the frame.</param>
         /// <returns>Whether or not the window opened successfully.</returns>
-        public static async Task<bool> CreateWindow(Type page, AppWindowPresentationKind viewMode,
+        public static async Task<bool> OpenInWindowAsync(this Type page, AppWindowPresentationKind viewMode,
             int minWidth, int minHeight, object parameter = null)
         {
             AppWindow window = await AppWindow.TryCreateAsync();

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RMP.App.Common;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -12,14 +13,13 @@ using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.Storage.Streams;
 using Windows.UI.Core;
-using static RMP.App.Common.Enums;
 
 namespace RMP.App.ViewModels
 {
-    public class PlaybackViewModel : BaseViewModel
+    public class PlaybackViewModel : BaseViewModel, ICancellableTask
     {
         /// <summary>
-        /// Creates a new NowPlayingViewModel.
+        /// Creates a new <see cref="PlaybackViewModel"/>.
         /// </summary>
         public PlaybackViewModel()
         {
@@ -51,29 +51,53 @@ namespace RMP.App.ViewModels
         public MediaPlaybackList PlaybackList { get; set; }
             = new MediaPlaybackList();
 
-        private CancellationTokenSource CTS { get; set; }
+        public CancellationTokenSource CTS { get; set; }
             = new CancellationTokenSource();
 
         public CancellationToken Token => CTS.Token;
 
-        private bool CanContinue = true;
+        public bool CanContinue { get; set; }
+            = true;
         #endregion
 
-        public async Task StartShuffle(IEnumerable<SongViewModel> songs)
+        public async Task StartShuffle(IEnumerator<object> songs, int count)
         {
-            songs = App.MViewModel.SortSongs(songs, SortMethods.Random);
+            List<SongViewModel> list = new List<SongViewModel>();
+
+            while (songs.MoveNext())
+            {
+                list.Add(songs.Current as SongViewModel);
+            }
+
+            Random rng = new Random();
+            list = list.OrderBy(s => rng.Next()).ToList();
 
             CancelTask();
-            await CreatePlaybackList(0, songs, Token);
+            await CreatePlaybackList(0, count,
+                list.AsEnumerable().GetEnumerator(), Token);
         }
 
-        public async Task StartPlayback(IEnumerable<SongViewModel> songs, int startIndex)
+        public async Task StartPlayback(IEnumerator<object> songs, int startIndex, int count)
         {
             CancelTask();
-            await CreatePlaybackList(startIndex, songs, Token);
+            await CreatePlaybackList(startIndex, count, songs, Token);
         }
 
-        public async Task CreatePlaybackList(int index, IEnumerable<SongViewModel> songs, CancellationToken token)
+        public async Task StartPlayback(IEnumerator<IStorageItem> songs, int startIndex, int count)
+        {
+            CancelTask();
+            List<SongViewModel> list = new List<SongViewModel>();
+            while (songs.MoveNext())
+            {
+                list.Add(new SongViewModel
+                    (await (songs.Current as StorageFile).AsSongModelAsync()));
+            }
+
+            await CreatePlaybackList(startIndex, count, list.GetEnumerator(), Token);
+            songs.Dispose();
+        }
+
+        public async Task CreatePlaybackList(int index, int count, IEnumerator<object> songs, CancellationToken token)
         {
             while (!CanContinue)
             {
@@ -82,22 +106,25 @@ namespace RMP.App.ViewModels
                 await Task.Delay(30);
             }
 
-            CanContinue = false;
-
-            Debug.WriteLine("Starting with item #" + index);
-
-            int addedSongs = 1;
-            int itemCount = songs.Count();
-
             PlayingSongs.Clear();
             PlaybackList.Items.Clear();
+            CanContinue = false;
+            songs.MoveNext();
+
+            int pos = 0;
+            int addedSongs = 1;
+            while (pos != index)
+            {
+                pos++;
+                songs.MoveNext();
+            }
 
             // Add initial item to avoid delays when starting playback
             MediaPlaybackItem item =
-                await CreateMusicItem(songs.ElementAt(index));
+                await CreateMusicItem(songs.Current as SongViewModel);
 
             PlaybackList.Items.Add(item);
-            PlayingSongs.Add(songs.ElementAt(index));
+            PlayingSongs.Add(songs.Current as SongViewModel);
 
             // Not disposing the media player here is intentional, it gets
             // marshalled from a different thread when setting the media players
@@ -106,50 +133,41 @@ namespace RMP.App.ViewModels
             Player.Play();
 
             SetCurrentSong(item);
+            songs.MoveNext();
 
-            if (itemCount <= 1)
-            {
-                Debug.WriteLine("Added 1 song.");
-                CanContinue = true;
-                return;
-            }
-
-            // Needs to account for the selected index offset.
-            for (int i = index + 1; addedSongs < itemCount; i++)
+            while (addedSongs < count)
             {
                 if (token.IsCancellationRequested)
                 {
                     Debug.WriteLine("Stop!");
+                    songs.Dispose();
                     CanContinue = true;
                     return;
                 }
 
-                if (i == itemCount)
+                if (!songs.MoveNext())
                 {
-                    i = 0;
+                    songs.Reset();
+                    songs.MoveNext();
                 }
 
-                item = await CreateMusicItem(songs.ElementAt(i));
+                item = await CreateMusicItem(songs.Current as SongViewModel);
                 PlaybackList.Items.Add(item);
-                PlayingSongs.Add(songs.ElementAt(i));
+                PlayingSongs.Add(songs.Current as SongViewModel);
 
                 addedSongs++;
-                if (i >= itemCount - 1)
-                {
-                    i = -1;
-                }
             }
 
-            Debug.WriteLine("Added " + addedSongs + " songs.");
+            songs.Dispose();
             CanContinue = true;
             return;
         }
 
         /// <summary>
-        /// Creates a MediaPlaybackItem from a SongViewModel.
+        /// Creates a <see cref="MediaPlaybackItem"/> from a <see cref="SongViewModel"/>.
         /// </summary>
         /// <param name="model">Song to convert.</param>
-        /// <returns>A MediaPlaybackItem based on the song.</returns>
+        /// <returns>A <see cref="MediaPlaybackItem"/> based on the song.</returns>
         private async Task<MediaPlaybackItem> CreateMusicItem(SongViewModel model)
         {
             StorageFile file = await StorageFile.GetFileFromPathAsync(model.Location);

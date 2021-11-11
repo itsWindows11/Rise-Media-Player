@@ -1,7 +1,6 @@
 ﻿using Rise.Models;
 using System;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -119,19 +118,8 @@ namespace RMP.App.ViewModels
         /// <summary>
         /// Gets or sets the album song count.
         /// </summary>
-        public uint TrackCount
-        {
-            get
-            {
-                int count = App.MViewModel.Songs.Count(s => s.Album == Model.Title && !s.WillRemove);
-
-                if (count == 0)
-                {
-                    Delete();
-                }
-                return (uint)count;
-            }
-        }
+        public int TrackCount =>
+            App.MViewModel.Songs.Count(s => s.Album == Model.Title && !s.Removed);
 
         /// <summary>
         /// Gets or sets the album thumbnail.
@@ -151,9 +139,22 @@ namespace RMP.App.ViewModels
         }
 
         /// <summary>
-        /// Gets or sets a value that indicates whether the item has to be deleted.
+        /// Gets or sets a value that indicates whether or not the
+        /// item has to be removed.
         /// </summary>
-        public bool WillRemove { get; set; }
+        public bool Removed
+        {
+            get => Model.Removed;
+            private set
+            {
+                if (value != Model.Removed)
+                {
+                    Model.Removed = value;
+                    IsModified = true;
+                    OnPropertyChanged(string.Empty);
+                }
+            }
+        }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the underlying model has been modified. 
@@ -198,31 +199,53 @@ namespace RMP.App.ViewModels
         /// <summary>
         /// Saves album data that has been edited.
         /// </summary>
-        public async Task SaveAsync()
+        public void Save()
         {
             IsInEdit = false;
             IsModified = false;
+            Removed = false;
+
             if (IsNewAlbum)
             {
                 IsNewAlbum = false;
                 App.MViewModel.Albums.Add(this);
             }
 
-            await App.Repository.Albums.UpsertAsync(Model).ConfigureAwait(false);
+            App.Repository.Albums.QueueUpsertAsync(Model);
+        }
+
+        /// <summary>
+        /// Checks whether or not the album is available. If it's not,
+        /// delete it.
+        /// </summary>
+        public async Task CheckAvailabilityAsync()
+        {
+            if (TrackCount == 0)
+            {
+                await DeleteAsync();
+                return;
+            }
+            Removed = false;
         }
 
         /// <summary>
         /// Delete album from repository and MViewModel.
         /// </summary>
-        public async void Delete()
+        public async Task DeleteAsync()
         {
             IsModified = true;
-            WillRemove = true;
+            Removed = true;
 
             App.MViewModel.Albums.Remove(this);
-            await App.Repository.Albums.DeleteAsync(Model).ConfigureAwait(false);
-            OnPropertyChanged(nameof(ArtistViewModel.AlbumCount));
-            Debug.WriteLine("Album removed!");
+            await App.Repository.Albums.QueueUpsertAsync(Model);
+
+            ArtistViewModel artist = App.MViewModel.Artists.
+                FirstOrDefault(a => a.Model.Name == Model.Artist);
+
+            if (artist != null)
+            {
+                await artist.CheckAvailabilityAsync();
+            }
         }
 
         /// <summary>
@@ -287,6 +310,6 @@ namespace RMP.App.ViewModels
         /// <summary>
         /// Called when a bound DataGrid control commits the edits that have been made to an album.
         /// </summary>
-        public async void EndEdit() => await SaveAsync();
+        public void EndEdit() => Save();
     }
 }

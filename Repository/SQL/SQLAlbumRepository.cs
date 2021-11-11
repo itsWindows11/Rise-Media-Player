@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using EFCore.BulkExtensions;
+using Microsoft.EntityFrameworkCore;
 using Rise.Models;
 using System;
 using System.Collections.Generic;
@@ -10,10 +11,12 @@ namespace Rise.Repository.SQL
     public class SQLAlbumRepository : IAlbumRepository
     {
         private readonly Context _db;
+        private readonly List<Album> _albums;
 
         public SQLAlbumRepository(Context db)
         {
             _db = db;
+            _albums = new List<Album>();
         }
 
         public async Task<IEnumerable<Album>> GetAsync()
@@ -46,19 +49,19 @@ namespace Rise.Repository.SQL
                 .ToListAsync();
         }
 
-        public async Task UpsertAsync(Album album)
+        public async Task QueueUpsertAsync(Album album)
         {
-            Album current = await _db.Albums.FirstOrDefaultAsync(_album => _album.Id == album.Id).ConfigureAwait(false);
-            if (null == current)
+            _albums.Add(album);
+            if (_albums.Count >= 200)
             {
-                _ = await _db.Albums.AddAsync(album).ConfigureAwait(false);
+                await UpsertQueuedAsync();
             }
-            else
-            {
-                _db.Entry(current).CurrentValues.SetValues(album);
-            }
+        }
 
-            _ = await _db.SaveChangesAsync().ConfigureAwait(false);
+        public async Task UpsertQueuedAsync()
+        {
+            await _db.BulkInsertOrUpdateAsync(_albums);
+            _albums.Clear();
         }
 
         public async Task DeleteAsync(Album album)

@@ -1,23 +1,23 @@
 ﻿using Microsoft.UI.Xaml.Controls;
 using RMP.App.Common;
-using RMP.App.Settings;
+using RMP.App.Dialogs;
 using RMP.App.Settings.ViewModels;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
+using Windows.UI.Xaml.Navigation;
 
-namespace RMP.App.Dialogs
+namespace RMP.App.Settings
 {
-    public sealed partial class SettingsDialog : ContentDialog
+    public sealed partial class SettingsPage : Page
     {
         #region Variables
-        public static SettingsDialog Current;
         private SettingsViewModel ViewModel => App.SViewModel;
 
-        public ObservableCollection<string> Breadcrumbs =
-            new ObservableCollection<string>();
+        public ObservableCollection<string> Breadcrumbs =>
+            SettingsDialogContainer.Breadcrumbs;
 
         private IEnumerable<ToggleButton> Toggles { get; set; }
 
@@ -30,11 +30,9 @@ namespace RMP.App.Dialogs
         private double Breakpoint { get; set; }
         #endregion
 
-        public SettingsDialog()
+        public SettingsPage()
         {
             InitializeComponent();
-            Current = this;
-
             Toggles = ItemGrid.GetChildren<ToggleButton>();
 
             foreach (ToggleButton toggle in Toggles)
@@ -48,36 +46,28 @@ namespace RMP.App.Dialogs
             ChangeIcons(ViewModel.ColoredSettingsIcons);
             Library.IsChecked = true;
 
-            // Calculate the breakpoints only on initial opening.
-            Loaded += (s, e) => Opened += SettingsDialog_Opened;
+            Loaded += SettingsDialog_Loaded;
+            SizeChanged += (s, a) => ResizeDialog(Window.Current.Bounds.Height, Window.Current.Bounds.Width);
+
+            NavigationCacheMode = NavigationCacheMode.Enabled;
         }
 
-        private void SettingsDialog_Opened(ContentDialog sender, ContentDialogOpenedEventArgs args)
+        private void SettingsDialog_Loaded(object sender, RoutedEventArgs e)
         {
             FirstDefinition.Width = new GridLength(1, GridUnitType.Auto);
 
             Breakpoint = ItemGrid.DesiredSize.Width + SecondGrid.DesiredSize.Width;
             ResizeDialog(Window.Current.Bounds.Height, Window.Current.Bounds.Width);
-
             FirstDefinition.Width = new GridLength(1, GridUnitType.Star);
-
-            Opened -= SettingsDialog_Opened;
-            SizeChanged += ContentDialog_SizeChanged;
-
-            // From now on, register the size changed event whenever the dialog gets opened.
-            Opened += (s, e) => SizeChanged += ContentDialog_SizeChanged;
         }
-
-        private void ContentDialog_SizeChanged(object sender, SizeChangedEventArgs e)
-            => ResizeDialog(Window.Current.Bounds.Height, Window.Current.Bounds.Width);
 
         private void ResizeDialog(double height, double width)
         {
-            SettingsFrame.Width = width < 800 ?
-                width - 68 : 800 - 68;
+            RootGrid.Width = width < 800 ?
+                width - 12 : 800 - 12;
 
             RootGrid.Height = height < 620 ?
-                height - 64 : 620 - 64;
+                height - 68 : 620 - 68;
 
             if (width - 40 < Breakpoint)
             {
@@ -98,7 +88,7 @@ namespace RMP.App.Dialogs
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
-            => Hide();
+            => SettingsDialogContainer.Current.Hide();
 
         private void ToggleButton_Checked(object sender, RoutedEventArgs e)
         {
@@ -139,7 +129,7 @@ namespace RMP.App.Dialogs
         }
 
         private async void Button_Click(object sender, RoutedEventArgs e)
-            => await FileHelpers.LaunchURIAsync(URLs.Feedback);
+            => _ = await URLs.Feedback.LaunchAsync();
 
         private void ToggleButton_Unchecked(object sender, RoutedEventArgs e)
         {

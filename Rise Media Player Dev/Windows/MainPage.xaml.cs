@@ -1,12 +1,14 @@
 ﻿using Microsoft.UI.Xaml.Controls;
 using RMP.App.Common;
 using RMP.App.Dialogs;
+using RMP.App.Settings;
 using RMP.App.Settings.ViewModels;
-using RMP.App.Views;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Windows.UI.Core;
+using Windows.UI.Core.Preview;
 using Windows.UI.WindowManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -16,7 +18,7 @@ using Windows.UI.Xaml.Navigation;
 using NavigationViewItem = Microsoft.UI.Xaml.Controls.NavigationViewItem;
 using NavigationViewItemBase = Microsoft.UI.Xaml.Controls.NavigationViewItemBase;
 
-namespace RMP.App.Windows
+namespace RMP.App.Views
 {
     /// <summary>
     /// Main app page, hosts the NavigationView and ContentFrame.
@@ -27,22 +29,18 @@ namespace RMP.App.Windows
         private SettingsViewModel ViewModel => App.SViewModel;
         public static MainPage Current;
 
-        private readonly NavigationHelper navigationHelper;
-        /// <summary>
-        /// Gets the <see cref="NavigationHelper"/> associated with this <see cref="Page"/>.
-        /// </summary>
-        public NavigationHelper NavigationHelper
-        {
-            get { return navigationHelper; }
-        }
-
         public ObservableCollection<Crumb> Breadcrumbs { get; set; }
             = new ObservableCollection<Crumb>();
 
         private MainTitleBar MainTitleBarHandle { get; set; }
 
-        public SettingsDialog SDialog { get; }
-            = new SettingsDialog();
+        public SettingsDialogContainer SDialog { get; }
+            = new SettingsDialogContainer();
+
+        private IDisposable SongsDefer { get; set; }
+        private IDisposable AlbumsDefer { get; set; }
+        private IDisposable ArtistsDefer { get; set; }
+        private IDisposable GenresDefer { get; set; }
         #endregion
 
         #region Classes
@@ -136,32 +134,66 @@ namespace RMP.App.Windows
             DataContext = ViewModel;
 
             NavigationCacheMode = NavigationCacheMode.Required;
-            navigationHelper = new NavigationHelper(this);
+            SDialog.Content = new SettingsPage();
+
+            SuspensionManager.RegisterFrame(ContentFrame, "NavViewFrame");
+
+            SystemNavigationManagerPreview.GetForCurrentView().
+                CloseRequested += MainPage_CloseRequested;
+
+            App.Indexer.Started += Indexer_Started;
+            App.Indexer.Finished += Indexer_Finished;
+        }
+
+        private async void Indexer_Started()
+        {
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                CheckTip.IsOpen = true;
+
+                SongsDefer = App.MViewModel.FilteredSongs.DeferRefresh();
+                AlbumsDefer = App.MViewModel.FilteredAlbums.DeferRefresh();
+                ArtistsDefer = App.MViewModel.FilteredArtists.DeferRefresh();
+                GenresDefer = App.MViewModel.FilteredGenres.DeferRefresh();
+            });
+        }
+
+        private async void Indexer_Finished(object sender, int e)
+        {
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                AddedTip.IsOpen = true;
+
+                SongsDefer.Dispose();
+                AlbumsDefer.Dispose();
+                ArtistsDefer.Dispose();
+                GenresDefer.Dispose();
+
+                App.MViewModel.FilteredSongs.Refresh();
+                App.MViewModel.FilteredAlbums.Refresh();
+                App.MViewModel.FilteredArtists.Refresh();
+                App.MViewModel.FilteredGenres.Refresh();
+            });
+        }
+
+        private async void MainPage_CloseRequested(object sender, SystemNavigationCloseRequestedPreviewEventArgs e)
+        {
+            if (ViewModel.PickUp)
+            {
+                try
+                {
+                    await SuspensionManager.SaveAsync();
+                }
+                catch (SuspensionManagerException)
+                {
+
+                }
+            }
         }
 
         // Update the TitleBar content layout depending on NavigationView DisplayMode
         private void NavigationViewControl_DisplayModeChanged(Microsoft.UI.Xaml.Controls.NavigationView sender, Microsoft.UI.Xaml.Controls.NavigationViewDisplayModeChangedEventArgs args)
             => MainTitleBarHandle.UpdateTitleBarItems(sender);
-
-        #region NavigationHelper registration
-        /// <summary>
-        /// The methods provided in this section are simply used to allow
-        /// NavigationHelper to respond to the page's navigation methods.
-        /// <para>
-        /// Page specific logic should be placed in event handlers for the
-        /// <see cref="NavigationHelper.LoadState"/>
-        /// and <see cref="NavigationHelper.SaveState"/>.
-        /// The navigation parameter is available in the LoadState method
-        /// in addition to page state preserved during an earlier session.
-        /// </para>
-        /// </summary>
-        /// <param name="e">Event data that describes how this page was reached.</param>
-        protected override void OnNavigatedTo(NavigationEventArgs e)
-            => navigationHelper.OnNavigatedTo(e);
-
-        protected override void OnNavigatedFrom(NavigationEventArgs e)
-            => navigationHelper.OnNavigatedFrom(e);
-        #endregion
 
         #region Navigation
         private async void NavView_ItemInvoked(Microsoft.UI.Xaml.Controls.NavigationView sender, Microsoft.UI.Xaml.Controls.NavigationViewItemInvokedEventArgs args)
@@ -216,7 +248,15 @@ namespace RMP.App.Windows
                     break;
 
                 case "DiscyPage":
-                    _ = ContentFrame.Navigate(typeof(DiscyPage));
+                    // _ = ContentFrame.Navigate(typeof(DiscyPage));
+                    dialog = new UnavailableDialog
+                    {
+                        Header = "Help & Tips are not available yet.",
+                        Description = "Hopefully you'll find this section helpful!",
+                        CenterHero = new BitmapImage(new Uri("ms-appx:///Assets/NavigationView/DiscyHelp.png")),
+                    };
+
+                    _ = await dialog.ShowAsync();
                     break;
 
                 case "GenresPage":
@@ -248,8 +288,8 @@ namespace RMP.App.Windows
                     break;
 
                 case "NowPlayingPage":
-                    _ = await GeneralControl.CreateWindow(typeof(NowPlaying),
-                        AppWindowPresentationKind.Default, 320, 300);
+                    _ = await typeof(NowPlaying).
+                        OpenInWindowAsync(AppWindowPresentationKind.Default, 320, 300);
                     break;
 
                 case "PlaylistsPage":
@@ -337,10 +377,15 @@ namespace RMP.App.Windows
             UpdateIconColor(ViewModel.IconPack);
 
             // Startup setting
-            await Navigate(ViewModel.Open);
+            if (ContentFrame.Content == null)
+            {
+                await Navigate(ViewModel.Open);
+            }
 
             FinishNavigation();
             PlayerElement.SetMediaPlayer(App.PViewModel.Player);
+
+            App.MViewModel.CanIndex = true;
         }
 
         /// <summary>
@@ -386,7 +431,7 @@ namespace RMP.App.Windows
         #endregion
 
         private async void Button_Click(object sender, RoutedEventArgs e)
-            => _ = await FileHelpers.LaunchURIAsync(URLs.Feedback);
+            => _ = await URLs.Feedback.LaunchAsync();
 
         private void MenuFlyoutItem_Click(object sender, RoutedEventArgs e)
         {
@@ -453,8 +498,11 @@ namespace RMP.App.Windows
             ViewModel.ChangeHeaderVisibility(visibilityCheck);
         }
 
-        private void Button_RightTapped(object sender, RightTappedRoutedEventArgs e)
-            => App.MViewModel.Sync();
+        private async void Button_RightTapped(object sender, RightTappedRoutedEventArgs e)
+        {
+            await App.MViewModel.StartFullCrawlAsync();
+            App.MViewModel.Sync();
+        }
 
         private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
             => FinishNavigation();

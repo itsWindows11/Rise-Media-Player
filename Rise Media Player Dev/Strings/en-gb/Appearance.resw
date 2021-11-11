@@ -130,7 +130,7 @@
     <value>Add widgets to make your experience more personal.</value>
   </data>
   <data name="AtAGlance.Title" xml:space="preserve">
-    <value>Customize your at a glance page</value>
+    <value>Customise your at a glance page</value>
   </data>
   <data name="ChooseTheme.Title" xml:space="preserve">
     <value>Choose your colour</value>
@@ -192,6 +192,9 @@
   <data name="NowPlaying" xml:space="preserve">
     <value>Now Playing</value>
   </data>
+  <data name="PickUp.Title" xml:space="preserve">
+    <value>Pick up where you left off</value>
+  </data>
   <data name="Playlists" xml:space="preserve">
     <value>Playlists</value>
   </data>
@@ -205,7 +208,7 @@
     <value>Add/remove sidebar items, change icon style and general behaviours.</value>
   </data>
   <data name="SidebarItems.Title" xml:space="preserve">
-    <value>Customize your sidebar</value>
+    <value>Customise your sidebar</value>
   </data>
   <data name="Songs" xml:space="preserve">
     <value>Songs</value>

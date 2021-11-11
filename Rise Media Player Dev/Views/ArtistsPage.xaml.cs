@@ -1,6 +1,5 @@
 ﻿using RMP.App.Common;
 using RMP.App.ViewModels;
-using RMP.App.Windows;
 using System.Collections.ObjectModel;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -23,10 +22,7 @@ namespace RMP.App.Views
         /// <summary>
         /// Gets the <see cref="NavigationHelper"/> associated with this <see cref="Page"/>.
         /// </summary>
-        public NavigationHelper NavigationHelper
-        {
-            get { return navigationHelper; }
-        }
+        public NavigationHelper NavigationHelper => navigationHelper;
 
         public ArtistsPage()
         {

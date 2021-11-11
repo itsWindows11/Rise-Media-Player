@@ -1,6 +1,6 @@
 ﻿using RMP.App.Settings.ViewModels;
 using RMP.App.Setup;
-using RMP.App.Windows;
+using RMP.App.Views;
 using System;
 using System.Threading.Tasks;
 using Windows.UI.ViewManagement;
@@ -216,9 +216,7 @@ namespace RMP.App.Dialogs
                     Hide();
 
                     Frame rootFrame = Window.Current.Content as Frame;
-                    rootFrame.CacheSize = 0;
                     _ = rootFrame.Navigate(typeof(MainPage));
-                    rootFrame.CacheSize = 1;
                     break;
 
                 default:

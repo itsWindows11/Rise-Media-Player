@@ -1,6 +1,5 @@
 ﻿using Rise.Models;
-using RMP.App.Indexers;
-using RMP.App.Props;
+using RMP.App.Common;
 using RMP.App.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -8,7 +7,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Windows.Storage;
-using Windows.Storage.FileProperties;
 using Windows.Storage.Search;
 
 namespace RMP.App.ChangeTrackers
@@ -20,42 +18,11 @@ namespace RMP.App.ChangeTrackers
         /// </summary>
         private static MainViewModel ViewModel => App.MViewModel;
 
-        /// <summary>
-        /// Sets up the filesystem tracker for music library.
-        /// </summary>
-        public static async Task SetupMusicTracker()
+        public static async void MusicQueryResultChanged(IStorageQueryResultBase sender, object args)
         {
-            App.MusicLibrary = await StorageLibrary.GetLibraryAsync(KnownLibraryId.Music);
-            StorageFolder music = KnownFolders.MusicLibrary;
+            sender.ContentsChanged -= MusicQueryResultChanged;
 
-            // Create a query containing all the files the app will be tracking
-            QueryOptions musicOption = SongIndexer.SongQueryOptions;
-
-            // Optimize indexing performance by using the Windows Indexer
-            musicOption.IndexerOption = IndexerOption.UseIndexerWhenAvailable;
-
-            // Prefetch file properties
-            musicOption.SetPropertyPrefetch(PropertyPrefetchOptions.MusicProperties,
-                Properties.DiscProperties);
-
-            StorageFileQueryResult musicResultSet =
-              music.CreateFileQueryWithOptions(musicOption);
-
-            // Indicate to the system the app is ready to change track
-            _ = await musicResultSet.GetFilesAsync(0, 1);
-
-            // Attach an event handler for when something changes on the system
-            musicResultSet.ContentsChanged += MusicLibrary_ContentsChanged;
-            App.MusicLibrary.DefinitionChanged += MusicLibrary_DefinitionChanged;
-            Debug.WriteLine("Registered music tracker!");
-        }
-
-        /// <summary>
-        /// Handle changes in the user's music library.
-        /// </summary>
-        private static async void MusicLibrary_ContentsChanged(IStorageQueryResultBase sender, object args)
-        {
-            Debug.WriteLine("New change!");
+            Debug.WriteLine("New changes!");
             StorageFolder changedFolder = sender.Folder;
             StorageLibraryChangeTracker folderTracker = changedFolder.TryGetChangeTracker();
             folderTracker.Enable();
@@ -70,8 +37,7 @@ namespace RMP.App.ChangeTrackers
                     // Change tracker is in an invalid state and must be reset
                     // This should be a very rare case, but must be handled
                     folderTracker.Reset();
-                    await SongIndexer.IndexAllSongsAsync();
-                    await HandleMusicFolderChanges(await KnownFolders.MusicLibrary.GetFoldersAsync());
+                    await ViewModel.StartFullCrawlAsync();
                     return;
                 }
 
@@ -81,17 +47,17 @@ namespace RMP.App.ChangeTrackers
                 }
                 else if (change.IsOfType(StorageItemTypes.Folder))
                 {
-                    // Not interested in folders
+                    await ViewModel.StartFullCrawlAsync();
                 }
                 else
                 {
                     if (change.ChangeType == StorageLibraryChangeType.Deleted)
                     {
-                        for (int i = 0; i < ViewModel.Songs.Count; i++)
+                        foreach (SongViewModel song in ViewModel.Songs)
                         {
-                            if (change.PreviousPath == ViewModel.Songs[i].Location)
+                            if (change.PreviousPath == song.Location)
                             {
-                                await ViewModel.Songs[i].Delete();
+                                await song.DeleteAsync();
                             }
                         }
                     }
@@ -101,17 +67,8 @@ namespace RMP.App.ChangeTrackers
             // Mark that all the changes have been seen and for the change tracker
             // to never return these changes again
             await changeReader.AcceptChangesAsync();
-        }
 
-        /// <summary>
-        /// Handle folders being removed/added from the music library.
-        /// </summary>
-        private static async void MusicLibrary_DefinitionChanged(StorageLibrary sender, object args)
-        {
-            Debug.WriteLine("Music folder changes!");
-
-            await SongIndexer.IndexAllSongsAsync();
-            await HandleMusicFolderChanges(await KnownFolders.MusicLibrary.GetFoldersAsync());
+            sender.ContentsChanged += MusicQueryResultChanged;
         }
 
         /// <summary>
@@ -129,15 +86,15 @@ namespace RMP.App.ChangeTrackers
                 case StorageLibraryChangeType.Created:
                     // Song was created..?
                     file = (StorageFile)await change.GetStorageItemAsync();
-                    newSong = await SongIndexer.CreateModelAsync(file);
-                    await SongIndexer.SaveModelsAsync(newSong, file);
+                    newSong = await file.AsSongModelAsync();
+                    await ViewModel.SaveModelsAsync(newSong, file);
                     break;
 
                 case StorageLibraryChangeType.MovedIntoLibrary:
                     // Song was moved into the library
                     file = (StorageFile)await change.GetStorageItemAsync();
-                    newSong = await SongIndexer.CreateModelAsync(file);
-                    await SongIndexer.SaveModelsAsync(newSong, file);
+                    newSong = await file.AsSongModelAsync();
+                    await ViewModel.SaveModelsAsync(newSong, file);
                     break;
 
                 case StorageLibraryChangeType.MovedOrRenamed:
@@ -147,9 +104,8 @@ namespace RMP.App.ChangeTrackers
                     {
                         if (change.PreviousPath == ViewModel.Songs[i].Location)
                         {
-                            await ViewModel.Songs[i].Delete();
-                            newSong = await SongIndexer.CreateModelAsync(file);
-                            await SongIndexer.SaveModelsAsync(newSong, file);
+                            ViewModel.Songs[i].Location = file.Path;
+                            await ViewModel.Songs[i].SaveAsync();
                         }
                     }
                     break;
@@ -161,7 +117,7 @@ namespace RMP.App.ChangeTrackers
                     {
                         if (change.PreviousPath == ViewModel.Songs[i].Location)
                         {
-                            await ViewModel.Songs[i].Delete();
+                            await ViewModel.Songs[i].DeleteAsync();
                         }
                     }
                     break;
@@ -172,7 +128,7 @@ namespace RMP.App.ChangeTrackers
                     {
                         if (change.PreviousPath == ViewModel.Songs[i].Location)
                         {
-                            await ViewModel.Songs[i].Delete();
+                            await ViewModel.Songs[i].DeleteAsync();
                         }
                     }
                     break;
@@ -185,9 +141,9 @@ namespace RMP.App.ChangeTrackers
                     {
                         if (change.PreviousPath == ViewModel.Songs[i].Location)
                         {
-                            await ViewModel.Songs[i].Delete();
-                            newSong = await SongIndexer.CreateModelAsync(file);
-                            await SongIndexer.SaveModelsAsync(newSong, file);
+                            await ViewModel.Songs[i].DeleteAsync();
+                            newSong = await file.AsSongModelAsync();
+                            await ViewModel.SaveModelsAsync(newSong, file);
                         }
                     }
                     break;
@@ -205,29 +161,25 @@ namespace RMP.App.ChangeTrackers
         /// <summary>
         /// Manage changes to the music library folders.
         /// </summary>
-        /// <param name="folders">Folder changes.</param>
-        public static async Task HandleMusicFolderChanges(IReadOnlyList<StorageFolder> folders)
+        public static async Task HandleMusicFolderChanges()
         {
+            List<SongViewModel> toRemove = new List<SongViewModel>();
+
             foreach (SongViewModel song in ViewModel.Songs)
             {
-                bool isInFolder = false;
-                foreach (StorageFolder folder in folders)
+                if (!File.Exists(song.Location))
                 {
-                    Debug.WriteLine("-----");
-                    Debug.WriteLine("Location: " + song.Location);
-                    Debug.WriteLine("Path: " + folder.Path + @"\" + Path.GetFileName(song.Location));
-                    if (song.Location == folder.Path + @"\" + Path.GetFileName(song.Location))
-                    {
-                        isInFolder = true;
-                        break;
-                    }
-                }
-
-                if (!isInFolder)
-                {
-                    await song.Delete();
+                    toRemove.Add(song);
                 }
             }
+
+            foreach (SongViewModel song in toRemove)
+            {
+                await song.DeleteAsync();
+            }
+
+            toRemove.Clear();
+            toRemove.TrimExcess();
         }
     }
 }

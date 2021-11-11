@@ -1,5 +1,5 @@
 ﻿using Rise.Models;
-using RMP.App.Windows;
+using RMP.App.Views;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -275,6 +275,8 @@ namespace RMP.App.ViewModels
             }
         }
 
+        private string _thumbnail;
+
         /// <summary>
         /// Gets the song album's thumbnail.
         /// </summary>
@@ -282,30 +284,32 @@ namespace RMP.App.ViewModels
         {
             get
             {
-                string thumb = "ms-appx:///Assets/Default.png";
-                try
+                if (_thumbnail == null)
                 {
-                    thumb = App.MViewModel.Albums.First(a => a.Model.Title == Model.Album
-                        && a.Model.Artist == Model.AlbumArtist).Thumbnail;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex.Message);
+                    _thumbnail = "ms-appx:///Assets/Default.png";
+                    try
+                    {
+                        _thumbnail = App.MViewModel.Albums.First(a => a.Model.Title == Model.Album
+                            && a.Model.Artist == Model.AlbumArtist).Thumbnail;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine(ex.Message);
+                    }
                 }
 
-                return thumb;
+                return _thumbnail;
             }
         }
 
-        private bool _willRemove;
-
         /// <summary>
-        /// Gets or sets a value that indicates whether the item has to be deleted.
+        /// Gets or sets a value that indicates whether or not the
+        /// item has to be removed.
         /// </summary>
-        public bool WillRemove
+        public bool Removed
         {
-            get => _willRemove;
-            set => Set(ref _willRemove, value);
+            get => Model.Removed;
+            private set => Model.Removed = value;
         }
 
         /// <summary>
@@ -356,6 +360,7 @@ namespace RMP.App.ViewModels
         {
             IsInEdit = false;
             IsModified = false;
+            Removed = false;
 
             if (IsNewSong)
             {
@@ -366,28 +371,40 @@ namespace RMP.App.ViewModels
                 OnPropertyChanged(nameof(ArtistViewModel.SongCount));
             }
 
-            await App.Repository.Songs.UpsertAsync(Model).ConfigureAwait(false);
-
+            await App.Repository.Songs.QueueUpsertAsync(Model);
         }
 
         /// <summary>
-        /// Delete song from repository and MViewModel.
+        /// Delete song from MViewModel.
         /// </summary>
-        public async Task Delete()
+        public async Task DeleteAsync()
         {
             await CancelEditsAsync();
             IsModified = true;
-            WillRemove = true;
+            Removed = true;
 
             if (!IsNewSong)
             {
                 App.MViewModel.Songs.Remove(this);
             }
 
-            await App.Repository.Songs.DeleteAsync(Model).ConfigureAwait(false);
+            await App.Repository.Songs.QueueUpsertAsync(Model);
+            AlbumViewModel album = App.MViewModel.Albums.
+                FirstOrDefault(a => a.Model.Title == Model.Album &&
+                           a.Model.Artist == Model.AlbumArtist);
 
-            OnPropertyChanged(nameof(AlbumViewModel.TrackCount));
-            OnPropertyChanged(nameof(ArtistViewModel.SongCount));
+            if (album != null)
+            {
+                await album.CheckAvailabilityAsync();
+            }
+
+            ArtistViewModel artist = App.MViewModel.Artists.
+                FirstOrDefault(a => a.Model.Name == Model.Artist);
+
+            if (artist != null)
+            {
+                await artist.CheckAvailabilityAsync();
+            }
         }
 
         /// <summary>
@@ -429,7 +446,6 @@ namespace RMP.App.ViewModels
         public async Task StartEdit()
         {
             IsInEdit = true;
-
             StorageFile file = await StorageFile.GetFileFromPathAsync(Location);
 
             if (file != null)
@@ -439,8 +455,8 @@ namespace RMP.App.ViewModels
                     FileProps = await file.GetBasicPropertiesAsync()
                 };
 
-                _ = await GeneralControl.CreateWindow(typeof(PropertiesPage),
-                    ApplicationViewMode.Default, 380, 550, props);
+                _ = await typeof(PropertiesPage).
+                    OpenInWindowAsync(ApplicationViewMode.Default, 380, 550, props);
             }
         }
 

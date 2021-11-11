@@ -85,29 +85,37 @@ namespace RMP.App.ViewModels
         }
 
         /// <summary>
-        /// Gets or sets the artist's song count.
+        /// Gets or sets a value that indicates whether or not the
+        /// item has to be removed.
         /// </summary>
-        public int SongCount
+        public bool Removed
         {
-            get
+            get => Model.Removed;
+            private set
             {
-                int count = App.MViewModel.Songs.Count(s => s.Model.Artist == Model.Name);
-
-                if (count == 0)
+                if (value != Model.Removed)
                 {
-                    Delete();
+                    Model.Removed = value;
+                    IsModified = true;
+                    OnPropertyChanged(string.Empty);
                 }
-
-                return count;
             }
         }
 
         public async Task<string> GetPictureAsync()
         {
             string name = HttpUtility.UrlEncode(Name);
+            string xml;
 
-            string xml = await WebHelpers.
-                CreateGETRequestAsync(URLs.MusicBrainz + "artist/?query=artist:" + name);
+            try
+            {
+                xml = await WebHelpers.
+                    CreateGETRequestAsync(URLs.MusicBrainz + "artist/?query=artist:" + name);
+            }
+            catch
+            {
+                return "ms-appx:///Assets/Default.png";
+            }
 
             if (xml == null)
             {
@@ -165,19 +173,17 @@ namespace RMP.App.ViewModels
             return "ms-appx:///Assets/Default.png";
         }
 
+        /// <summary>
+        /// Gets or sets the artist's song count.
+        /// </summary>
+        public int SongCount => App.MViewModel.Songs.Count(s => s.Model.Artist == Model.Name);
         public string Songs => SongCount.ToString() + " " + ResourceLoaders.MediaDataLoader.GetString("Songs");
 
         /// <summary>
         /// Gets or sets the artist's album count.
         /// </summary>
         public int AlbumCount => App.MViewModel.Albums.Count(a => a.Model.Artist == Model.Name);
-
         public string Albums => AlbumCount.ToString() + " " + ResourceLoaders.MediaDataLoader.GetString("Albums");
-
-        /// <summary>
-        /// Gets or sets a value that indicates whether the item has to be deleted.
-        /// </summary>
-        public bool WillRemove { get; set; }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the underlying model has been modified. 
@@ -226,6 +232,7 @@ namespace RMP.App.ViewModels
         {
             IsInEdit = false;
             IsModified = false;
+            Removed = false;
 
             if (IsNewArtist)
             {
@@ -233,20 +240,34 @@ namespace RMP.App.ViewModels
                 App.MViewModel.Artists.Add(this);
             }
 
-            Picture = await GetPictureAsync();
-            await App.Repository.Artists.UpsertAsync(Model).ConfigureAwait(false);
+            Picture = "ms-appx:///Assets/Default.png";
+            await App.Repository.Artists.QueueUpsertAsync(Model);
+        }
+
+        /// <summary>
+        /// Checks whether or not the artist is available. If it's not,
+        /// delete it.
+        /// </summary>
+        public async Task CheckAvailabilityAsync()
+        {
+            if (SongCount == 0 && AlbumCount == 0)
+            {
+                await DeleteAsync();
+                return;
+            }
+            Removed = false;
         }
 
         /// <summary>
         /// Delete artist from repository and MViewModel.
         /// </summary>
-        public async void Delete()
+        public async Task DeleteAsync()
         {
             IsModified = true;
-            WillRemove = true;
+            Removed = true;
 
             App.MViewModel.Artists.Remove(this);
-            await App.Repository.Artists.DeleteAsync(Model).ConfigureAwait(false);
+            await App.Repository.Artists.QueueUpsertAsync(Model);
             Debug.WriteLine("Artist removed!");
         }
 
@@ -312,6 +333,6 @@ namespace RMP.App.ViewModels
         /// <summary>
         /// Called when a bound DataGrid control commits the edits that have been made to an artist.
         /// </summary>
-        public async void EndEdit() => await SaveAsync();
+        public async Task EndEditAsync() => await SaveAsync();
     }
 }
