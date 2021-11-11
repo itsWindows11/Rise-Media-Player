@@ -175,6 +175,9 @@
     <Compile Include="UserControls\ArtistSongListItem.xaml.cs">
       <DependentUpon>ArtistSongListItem.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UserControls\CustomMediaPlayerControl.xaml.cs">
+      <DependentUpon>CustomMediaPlayerControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="UserControls\FullSongListItem.xaml.cs">
       <DependentUpon>FullSongListItem.xaml</DependentUpon>
     </Compile>
@@ -460,6 +463,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="UserControls\ArtistSongListItem.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="UserControls\CustomMediaPlayerControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

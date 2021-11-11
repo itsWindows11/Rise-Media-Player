@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    xmlns:controls="using:RMP.App.UserControls"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -139,8 +140,9 @@
             <muxc:InfoBar x:Uid="/Information/AtAGlance"
                           IsClosable="False"
                           IsOpen="True"
-                          Margin="0,0,0,120"
                           Severity="Informational" />
+
+            <controls:CustomMediaPlayerControl Margin="0,0,0,120" />
         </StackPanel>
     </ScrollViewer>
 </Page>
