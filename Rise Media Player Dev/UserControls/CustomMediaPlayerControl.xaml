@@ -28,9 +28,9 @@
         </StackPanel>
         
         <RelativePanel Grid.Column="1" VerticalAlignment="Center">
-            <TextBlock x:Name="bruhHeft" RelativePanel.AlignVerticalCenterWithPanel="True" Text="1:11:00" Height="20" RelativePanel.AlignLeftWith="SliderProgress" />
-            <Slider x:Name="SliderProgress" Margin="50,0,50,0" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" IsThumbToolTipEnabled="False" />
-            <TextBlock Text="1:11:00" x:Name="bruhRight" Height="20" RelativePanel.AlignRightWith="SliderProgress" RelativePanel.AlignVerticalCenterWithPanel="True" RelativePanel.AlignRightWithPanel="True" />
+            <TextBlock x:Name="bruhHeft" RelativePanel.AlignVerticalCenterWithPanel="True" Text="1:11" Height="20" RelativePanel.AlignLeftWith="SliderProgress" />
+            <Slider x:Name="SliderProgress" Margin="35,0,35,0" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" IsThumbToolTipEnabled="False" />
+            <TextBlock Text="1:11" x:Name="bruhRight" Height="20" RelativePanel.AlignRightWith="SliderProgress" RelativePanel.AlignVerticalCenterWithPanel="True" RelativePanel.AlignRightWithPanel="True" />
         </RelativePanel>
 
         <RelativePanel Grid.Column="2" Margin="20,0,0,0">
