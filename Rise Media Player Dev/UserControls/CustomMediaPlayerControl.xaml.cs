@@ -9,19 +9,44 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Data;
+using Windows.UI.Xaml.Hosting;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
-
-// The User Control item template is documented at https://go.microsoft.com/fwlink/?LinkId=234236
+using Windows.UI.Composition;
+using System.Numerics;
+using Windows.UI;
+using Windows.Media.Playback;
+using Windows.Storage;
+using Windows.Media.Core;
 
 namespace Rise.App.UserControls
 {
     public sealed partial class CustomMediaPlayerControl : UserControl
     {
+        public MediaPlayer MediaPlayer { get; set; }
+
         public CustomMediaPlayerControl()
         {
             this.InitializeComponent();
+
+            //SongTitle.Text = App.PViewModel.CurrentSong.Title;
+            MediaPlayer.MediaOpened += MediaPlayer_MediaOpened;
+
         }
+
+        private void MediaPlayer_MediaOpened(MediaPlayer sender, object args)
+        {
+            throw new NotImplementedException("Not implemented");
+        }
+
+
+        #region Getters/Setters
+        public void SetSongTitle(string songTitle)
+        {
+            SongTitle.Text = songTitle;
+        }
+        #endregion
+
     }
 }
