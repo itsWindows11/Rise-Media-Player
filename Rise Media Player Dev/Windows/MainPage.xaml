@@ -340,7 +340,9 @@
                         </Frame.ContentTransitions>
                     </Frame>
 
-                    <MediaPlayerElement x:Name="PlayerElement"
+                    <uc:CustomMediaPlayerControl Margin="0,0,0,120" VerticalAlignment="Bottom" x:Name="SampleMediaPlayer" />
+
+                    <!--<MediaPlayerElement x:Name="PlayerElement"
                                         AreTransportControlsEnabled="True"
                                         Height="120"
                                         Margin="44,0"
@@ -367,7 +369,7 @@
                                                     IsNextTrackButtonVisible="True"
                                                     IsPreviousTrackButtonVisible="True" />
                         </MediaPlayerElement.TransportControls>
-                    </MediaPlayerElement>
+                    </MediaPlayerElement>-->
                 </Grid>
             </Grid>
         </muxc:NavigationView>
@@ -411,5 +413,6 @@
                 <muxc:FontIconSource Glyph="&#xE8F1;" />
             </muxc:TeachingTip.IconSource>
         </muxc:TeachingTip>
+        
     </Grid>
 </Page>

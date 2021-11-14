@@ -5,7 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
-    xmlns:controls="using:RMP.App.UserControls"
+    xmlns:controls="using:Rise.App.UserControls"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -142,7 +142,6 @@
                           IsOpen="True"
                           Severity="Informational" />
 
-            <controls:CustomMediaPlayerControl Margin="0,0,0,120" />
         </StackPanel>
     </ScrollViewer>
 </Page>

@@ -383,7 +383,7 @@ namespace Rise.App.Views
             }
 
             FinishNavigation();
-            PlayerElement.SetMediaPlayer(App.PViewModel.Player);
+            //PlayerElement.SetMediaPlayer(App.PViewModel.Player);
 
             App.MViewModel.CanIndex = true;
         }
