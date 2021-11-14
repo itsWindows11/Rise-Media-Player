@@ -19,27 +19,79 @@ using Windows.UI;
 using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.Media.Core;
+using Windows.ApplicationModel.Core;
+using Windows.UI.Core;
 
 namespace Rise.App.UserControls
 {
     public sealed partial class CustomMediaPlayerControl : UserControl
     {
-        public MediaPlayer MediaPlayer { get; set; }
+        private MediaPlayer _player = App.PViewModel.Player;
 
         public CustomMediaPlayerControl()
         {
             this.InitializeComponent();
 
-            //SongTitle.Text = App.PViewModel.CurrentSong.Title;
-            MediaPlayer.MediaOpened += MediaPlayer_MediaOpened;
+            _player.PlaybackSession.PositionChanged += PlaybackSession_PositionChanged;
+            _player.PlaybackSession.PlaybackStateChanged += PlaybackSession_PlaybackStateChanged;
 
         }
 
-        private void MediaPlayer_MediaOpened(MediaPlayer sender, object args)
+        private async void PlaybackSession_PlaybackStateChanged(MediaPlaybackSession sender, object args)
         {
-            throw new NotImplementedException("Not implemented");
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
+            () =>
+            {
+                 SliderProgress.Maximum = sender.NaturalDuration.TotalSeconds;
+                 SetSongTitle(App.PViewModel.CurrentSong.Title);
+                 SongArtist.Text = App.PViewModel.CurrentSong.Artist;
+
+                int seconds = (int)sender.NaturalDuration.TotalSeconds;
+                int minutes = (int)sender.NaturalDuration.TotalMinutes;
+                if (seconds < 10)
+                {
+                    MediaPlayingDurationRight.Text = $"{minutes}:0{seconds}";
+                }
+                else MediaPlayingDurationRight.Text = $"{minutes}:{seconds}";
+            });
+
+            if (sender.PlaybackState == MediaPlaybackState.Playing)
+            {
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                 {
+                     PlayButtonIcon.Symbol = Symbol.Pause;
+                 });
+            }
         }
 
+        private async void PlaybackSession_PositionChanged(MediaPlaybackSession sender, object args)
+        {
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                SliderProgress.Value = sender.Position.TotalSeconds;
+                int seconds = (int)sender.Position.TotalSeconds;
+                int minutes = (int)sender.Position.TotalMinutes;
+                if (seconds < 10)
+                {
+                    MediaPlayingDurationLeft.Text = $"{minutes}:0{seconds}";
+                }
+                else MediaPlayingDurationLeft.Text = $"{minutes}:{seconds}";
+            });
+        }
+
+        public void TogglePlayPause()
+        {
+            if (_player.PlaybackSession.PlaybackState == MediaPlaybackState.Paused)
+            {
+                _player.Play();
+                PlayButtonIcon.Symbol = Symbol.Pause;
+            }
+            else if (_player.PlaybackSession.PlaybackState == MediaPlaybackState.Playing)
+            {
+                _player.Pause();
+                PlayButtonIcon.Symbol = Symbol.Play;
+            }
+        }
 
         #region Getters/Setters
         public void SetSongTitle(string songTitle)
@@ -48,5 +100,9 @@ namespace Rise.App.UserControls
         }
         #endregion
 
+        private void PlayButton_Click(object sender, RoutedEventArgs e)
+        {
+            TogglePlayPause();
+        }
     }
 }

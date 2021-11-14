@@ -36,9 +36,9 @@
                     </Viewbox>
                 </Button>
 
-                <Button BorderBrush="Transparent" Background="Transparent" x:Name="PlayButton">
+                <Button BorderBrush="Transparent" Background="Transparent" Click="PlayButton_Click" x:Name="PlayButton">
                     <Viewbox Width="22" Height="22">
-                        <SymbolIcon Symbol="Play" />
+                        <SymbolIcon Symbol="Play" x:Name="PlayButtonIcon" />
                     </Viewbox>
                 </Button>
 
@@ -49,9 +49,9 @@
                 </Button>
             </StackPanel>
             <RelativePanel>
-                <TextBlock x:Name="bruhHeft" RelativePanel.AlignVerticalCenterWithPanel="True" Text="1:11" Height="20" RelativePanel.AlignLeftWith="SliderProgress" />
-                <Slider x:Name="SliderProgress" Margin="35,0,35,0" RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True" IsThumbToolTipEnabled="False" />
-                <TextBlock Text="1:11" x:Name="bruhRight" Height="20" RelativePanel.AlignRightWith="SliderProgress" RelativePanel.AlignVerticalCenterWithPanel="True" RelativePanel.AlignRightWithPanel="True" />
+                <TextBlock x:Name="MediaPlayingDurationLeft" RelativePanel.AlignVerticalCenterWithPanel="True" Text="00:00" Height="20" RelativePanel.AlignLeftWithPanel="True" />
+                <Slider x:Name="SliderProgress" Padding="8,0,8,0" RelativePanel.RightOf="MediaPlayingDurationLeft" RelativePanel.LeftOf="MediaPlayingDurationRight" IsThumbToolTipEnabled="False" />
+                <TextBlock Text="00:00" x:Name="MediaPlayingDurationRight" Height="20" RelativePanel.AlignVerticalCenterWithPanel="True" RelativePanel.AlignRightWithPanel="True" />
             </RelativePanel>
         </StackPanel>
 
