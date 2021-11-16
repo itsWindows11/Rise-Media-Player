@@ -21,6 +21,7 @@ using Windows.Storage;
 using Windows.Media.Core;
 using Windows.ApplicationModel.Core;
 using Windows.UI.Core;
+using Windows.UI.ViewManagement;
 
 namespace Rise.App.UserControls
 {
@@ -103,6 +104,26 @@ namespace Rise.App.UserControls
         private void PlayButton_Click(object sender, RoutedEventArgs e)
         {
             TogglePlayPause();
+        }
+
+        private async void OverlayButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (ApplicationView.GetForCurrentView().ViewMode != ApplicationViewMode.CompactOverlay)
+            {
+                var preferences = ViewModePreferences.CreateDefault(ApplicationViewMode.CompactOverlay);
+                preferences.CustomSize = new Size(400, 400);
+                bool modeSwitched = await ApplicationView.GetForCurrentView().TryEnterViewModeAsync(ApplicationViewMode.CompactOverlay, preferences);
+                GoToOverlayIcon.Visibility = Visibility.Collapsed;
+                ExitOverlayIcon.Visibility = Visibility.Visible;
+            } else
+            {
+                var preferences = ViewModePreferences.CreateDefault(ApplicationViewMode.CompactOverlay);
+                preferences.CustomSize = new Size(600, 700);
+                bool modeSwitched = await ApplicationView.GetForCurrentView().TryEnterViewModeAsync(ApplicationViewMode.Default, preferences);
+                ExitOverlayIcon.Visibility = Visibility.Collapsed;
+                GoToOverlayIcon.Visibility = Visibility.Visible;
+            }
+
         }
     }
 }
