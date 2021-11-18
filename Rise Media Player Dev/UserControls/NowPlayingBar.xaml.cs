@@ -36,37 +36,35 @@ namespace Rise.App.UserControls
 
             _player.PlaybackSession.PositionChanged += PlaybackSession_PositionChanged;
             _player.PlaybackSession.PlaybackStateChanged += PlaybackSession_PlaybackStateChanged;
+
+            DataContext = App.PViewModel;
         }
 
         private async void PlaybackSession_PlaybackStateChanged(MediaPlaybackSession sender, object args)
         {
-            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
-            () =>
-            {
-                 SliderProgress.Maximum = sender.NaturalDuration.TotalSeconds;
-                 SetSongTitle(App.PViewModel.CurrentSong.Title);
-                 SongArtist.Text = App.PViewModel.CurrentSong.Artist;
-
-                int seconds = (int)sender.NaturalDuration.TotalSeconds;
-                int minutes = (int)sender.NaturalDuration.TotalMinutes;
-                if (seconds < 10)
-                {
-                    MediaPlayingDurationRight.Text = $"{minutes}:0{seconds}";
-                }
-                else MediaPlayingDurationRight.Text = $"{minutes}:{seconds}";
-            });
-
             if (sender.PlaybackState == MediaPlaybackState.Playing)
             {
                 await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-                 {
+                {
                      PlayButtonIcon.Symbol = Symbol.Pause;
-                 });
+                });
             }
         }
 
         private async void PlaybackSession_PositionChanged(MediaPlaybackSession sender, object args)
         {
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                int seconds = (int)sender.NaturalDuration.TotalSeconds;
+                int minutes = (int)sender.NaturalDuration.TotalMinutes;
+                SliderProgress.Maximum = sender.NaturalDuration.TotalSeconds;
+                if (seconds < 10)
+                {
+                    MediaPlayingDurationRight.Text = $"{minutes}:{TimeSpan.FromSeconds(seconds)}";
+                }
+                else MediaPlayingDurationRight.Text = $"{minutes}:{seconds}";
+            });
+
             await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
                 SliderProgress.Value = sender.Position.TotalSeconds;

@@ -8,6 +8,8 @@
     mc:Ignorable="d"
     d:DesignHeight="300"
     d:DesignWidth="700"
+    d:DataContext="{d:DesignInstance Type=viewmodels:PlaybackViewModel}"
+    xmlns:viewmodels="using:Rise.App.ViewModels"
     xmlns:ui="using:Microsoft.Toolkit.Uwp.UI"
     xmlns:media="using:Microsoft.Toolkit.Uwp.UI.Media">
 
@@ -28,10 +30,10 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Orientation="Horizontal">
-                <Border Background="White" Width="90" Height="70" CornerRadius="5" />
+                <Border Background="White" Width="70" Height="70" CornerRadius="5" />
                 <StackPanel VerticalAlignment="Center" Margin="10,0,0,0">
-                    <TextBlock Text="Title" FontSize="16" x:Name="SongTitle" />
-                    <TextBlock Text="Artist" FontSize="16" FontWeight="Bold" x:Name="SongArtist" />
+                    <TextBlock Text="{Binding CurrentSong.Title, Mode=OneWay}" FontSize="16" x:Name="SongTitle" />
+                    <TextBlock Text="{Binding CurrentSong.Artist, Mode=OneWay}" FontSize="16" FontWeight="Bold" x:Name="SongArtist" />
                 </StackPanel>
             </StackPanel>
 
