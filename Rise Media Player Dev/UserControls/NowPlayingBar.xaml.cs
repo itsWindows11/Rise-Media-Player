@@ -60,7 +60,7 @@ namespace Rise.App.UserControls
                 SliderProgress.Maximum = sender.NaturalDuration.TotalSeconds;
                 if (seconds < 10)
                 {
-                    MediaPlayingDurationRight.Text = $"{minutes}:{TimeSpan.FromSeconds(seconds)}";
+                    MediaPlayingDurationRight.Text = $"{minutes}:0{seconds}";
                 }
                 else MediaPlayingDurationRight.Text = $"{minutes}:{seconds}";
             });
@@ -122,6 +122,24 @@ namespace Rise.App.UserControls
                 ExitOverlayIcon.Visibility = Visibility.Collapsed;
                 GoToOverlayIcon.Visibility = Visibility.Visible;
             }
+        }
+
+        private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (Window.Current.Bounds.Width >= 1000)
+            {
+                DefaultVolumeControl.Visibility = Visibility.Visible;
+                VolumeFlyoutButton.Visibility = Visibility.Collapsed;
+            } else
+            {
+                DefaultVolumeControl.Visibility = Visibility.Collapsed;
+                VolumeFlyoutButton.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void VolumeSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            _player.Volume = VolumeSlider.Value;
         }
     }
 }
