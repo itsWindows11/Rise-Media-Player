@@ -46,7 +46,7 @@ namespace Rise.App.UserControls
             {
                 await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
-                     PlayButtonIcon.Symbol = Symbol.Pause;
+                     PlayButtonIcon.Glyph = "\uF8AE";
                 });
             }
         }
@@ -83,12 +83,12 @@ namespace Rise.App.UserControls
             if (_player.PlaybackSession.PlaybackState == MediaPlaybackState.Paused)
             {
                 _player.Play();
-                PlayButtonIcon.Symbol = Symbol.Pause;
+                PlayButtonIcon.Glyph = "\uF8AE";
             }
             else if (_player.PlaybackSession.PlaybackState == MediaPlaybackState.Playing)
             {
                 _player.Pause();
-                PlayButtonIcon.Symbol = Symbol.Play;
+                PlayButtonIcon.Glyph = "\uF5B0";
             }
         }
 

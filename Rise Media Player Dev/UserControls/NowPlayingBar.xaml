@@ -40,21 +40,15 @@
             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                     <Button BorderBrush="Transparent" Background="Transparent" x:Name="PreviousButton">
-                        <Viewbox Width="16" Height="16">
-                            <SymbolIcon Symbol="Previous" />
-                        </Viewbox>
+                        <FontIcon Glyph="&#xF8AC;" />
                     </Button>
 
                     <Button BorderBrush="Transparent" Background="Transparent" Click="PlayButton_Click" x:Name="PlayButton">
-                        <Viewbox Width="22" Height="22">
-                            <SymbolIcon Symbol="Play" x:Name="PlayButtonIcon" />
-                        </Viewbox>
+                        <FontIcon Glyph="&#xF5B0;" FontSize="25" x:Name="PlayButtonIcon" />
                     </Button>
 
                     <Button BorderBrush="Transparent" Background="Transparent" x:Name="NextButton">
-                        <Viewbox Width="16" Height="16">
-                            <SymbolIcon Symbol="Next" />
-                        </Viewbox>
+                        <FontIcon Glyph="&#xF8AD;" />
                     </Button>
                 </StackPanel>
                 <RelativePanel>
