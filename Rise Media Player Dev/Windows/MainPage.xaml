@@ -340,7 +340,7 @@
                         </Frame.ContentTransitions>
                     </Frame>
 
-                    <uc:CustomMediaPlayerControl Margin="15" VerticalAlignment="Bottom" x:Name="SampleMediaPlayer" />
+                    <uc:NowPlayingBar Margin="15" VerticalAlignment="Bottom" x:Name="SampleMediaPlayer" />
 
                     <!--<MediaPlayerElement x:Name="PlayerElement"
                                         AreTransportControlsEnabled="True"
