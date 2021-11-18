@@ -22,20 +22,20 @@ using Windows.Media.Core;
 using Windows.ApplicationModel.Core;
 using Windows.UI.Core;
 using Windows.UI.ViewManagement;
+using Windows.System.Profile;
 
 namespace Rise.App.UserControls
 {
-    public sealed partial class CustomMediaPlayerControl : UserControl
+    public sealed partial class NowPlayingBar : UserControl
     {
         private MediaPlayer _player = App.PViewModel.Player;
 
-        public CustomMediaPlayerControl()
+        public NowPlayingBar()
         {
             this.InitializeComponent();
 
             _player.PlaybackSession.PositionChanged += PlaybackSession_PositionChanged;
             _player.PlaybackSession.PlaybackStateChanged += PlaybackSession_PlaybackStateChanged;
-
         }
 
         private async void PlaybackSession_PlaybackStateChanged(MediaPlaybackSession sender, object args)
@@ -106,6 +106,7 @@ namespace Rise.App.UserControls
             TogglePlayPause();
         }
 
+
         private async void OverlayButton_Click(object sender, RoutedEventArgs e)
         {
             if (ApplicationView.GetForCurrentView().ViewMode != ApplicationViewMode.CompactOverlay)
@@ -123,7 +124,6 @@ namespace Rise.App.UserControls
                 ExitOverlayIcon.Visibility = Visibility.Collapsed;
                 GoToOverlayIcon.Visibility = Visibility.Visible;
             }
-
         }
     }
 }

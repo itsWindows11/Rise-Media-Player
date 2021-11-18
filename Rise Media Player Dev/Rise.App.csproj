@@ -175,8 +175,8 @@
     <Compile Include="UserControls\ArtistSongListItem.xaml.cs">
       <DependentUpon>ArtistSongListItem.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UserControls\CustomMediaPlayerControl.xaml.cs">
-      <DependentUpon>CustomMediaPlayerControl.xaml</DependentUpon>
+    <Compile Include="UserControls\NowPlayingBar.xaml.cs">
+      <DependentUpon>NowPlayingBar.xaml</DependentUpon>
     </Compile>
     <Compile Include="UserControls\FullSongListItem.xaml.cs">
       <DependentUpon>FullSongListItem.xaml</DependentUpon>
@@ -466,7 +466,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="UserControls\CustomMediaPlayerControl.xaml">
+    <Page Include="UserControls\NowPlayingBar.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
