@@ -54,7 +54,7 @@
                 </StackPanel>
                 <RelativePanel>
                     <TextBlock x:Name="MediaPlayingDurationLeft" RelativePanel.AlignVerticalCenterWithPanel="True" Text="00:00" Height="20" RelativePanel.AlignLeftWithPanel="True" />
-                    <Slider x:Name="SliderProgress" Padding="8,0,8,0" RelativePanel.RightOf="MediaPlayingDurationLeft" RelativePanel.LeftOf="MediaPlayingDurationRight" IsThumbToolTipEnabled="False" />
+                    <Slider PointerCaptureLost="SliderProgress_PointerCaptureLost" x:Name="SliderProgress" Padding="8,0,8,0" RelativePanel.RightOf="MediaPlayingDurationLeft" RelativePanel.LeftOf="MediaPlayingDurationRight" IsThumbToolTipEnabled="False" />
                     <TextBlock Text="00:00" x:Name="MediaPlayingDurationRight" Height="20" RelativePanel.AlignVerticalCenterWithPanel="True" RelativePanel.AlignRightWithPanel="True" />
                 </RelativePanel>
             </StackPanel>

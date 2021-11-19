@@ -141,5 +141,10 @@ namespace Rise.App.UserControls
         {
             _player.Volume = VolumeSlider.Value;
         }
+
+        private void SliderProgress_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+        {
+            _player.PlaybackSession.Position = TimeSpan.FromSeconds(SliderProgress.Value);
+        }
     }
 }
