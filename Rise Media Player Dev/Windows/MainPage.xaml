@@ -340,7 +340,7 @@
                         </Frame.ContentTransitions>
                     </Frame>
 
-                    <uc:NowPlayingBar Margin="15" VerticalAlignment="Bottom" x:Name="SampleMediaPlayer" />
+                    <uc:NowPlayingBar IsArtistShown="True" Margin="15" VerticalAlignment="Bottom" x:Name="SampleMediaPlayer" />
 
                     <!--<MediaPlayerElement x:Name="PlayerElement"
                                         AreTransportControlsEnabled="True"

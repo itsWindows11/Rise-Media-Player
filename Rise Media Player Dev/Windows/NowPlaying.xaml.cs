@@ -17,7 +17,7 @@ namespace Rise.App.Views
         public NowPlaying()
         {
             InitializeComponent();
-            Player.SetMediaPlayer(ViewModel.Player);
+            //Player.SetMediaPlayer(ViewModel.Player);
 
             ApplicationView.GetForCurrentView().TitleBar.ButtonBackgroundColor = Colors.Transparent;
             ApplicationView.GetForCurrentView().TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;

@@ -23,12 +23,35 @@ using Windows.ApplicationModel.Core;
 using Windows.UI.Core;
 using Windows.UI.ViewManagement;
 using Windows.System.Profile;
+using Microsoft.Toolkit.Uwp.UI;
 
 namespace Rise.App.UserControls
 {
     public sealed partial class NowPlayingBar : UserControl
     {
+        #region Variables
         private MediaPlayer _player = App.PViewModel.Player;
+        #endregion
+
+        #region Properties
+
+        public static readonly DependencyProperty ShowArtist = DependencyProperty.Register("IsArtistShown", typeof(bool), typeof(NowPlayingBar), new PropertyMetadata(null));
+
+        public bool IsArtistShown 
+        {
+            get => (bool)GetValue(ShowArtist);
+            set => SetValue(ShowArtist, value);
+        }
+
+        public static readonly DependencyProperty TransparencyEnabled = DependencyProperty.Register("Transparent", typeof(bool), typeof(NowPlayingBar), new PropertyMetadata(null));
+
+        public bool Transparent
+        {
+            get => (bool)GetValue(TransparencyEnabled);
+            set => SetValue(TransparencyEnabled, value);
+        }
+
+        #endregion
 
         public NowPlayingBar()
         {
@@ -36,6 +59,18 @@ namespace Rise.App.UserControls
 
             _player.PlaybackSession.PositionChanged += PlaybackSession_PositionChanged;
             _player.PlaybackSession.PlaybackStateChanged += PlaybackSession_PlaybackStateChanged;
+
+            if (!IsArtistShown)
+            {
+                Grid.ColumnDefinitions[0].Width = new GridLength(0, GridUnitType.Star);
+            }
+
+            if (Transparent)
+            {
+                Effects.SetShadow(Parent1, EmptyDropShadow);
+                Grid.Background = new SolidColorBrush { Color = Colors.Transparent };
+                Grid.BorderThickness = new Thickness(0);
+            }
 
             DataContext = App.PViewModel;
         }
@@ -49,6 +84,12 @@ namespace Rise.App.UserControls
                 await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
                      PlayButtonIcon.Glyph = "\uF8AE";
+                });
+            } else
+            {
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                {
+                    PlayButtonIcon.Glyph = "\uF5B0";
                 });
             }
         }
@@ -112,11 +153,16 @@ namespace Rise.App.UserControls
             {
                 DefaultVolumeControl.Visibility = Visibility.Visible;
                 VolumeFlyoutButton.Visibility = Visibility.Collapsed;
+                if (IsArtistShown)
+                {
+                    Grid.ColumnDefinitions[0].Width = new GridLength(0.6, GridUnitType.Star);
+                }
             }
             else
             {
                 DefaultVolumeControl.Visibility = Visibility.Collapsed;
                 VolumeFlyoutButton.Visibility = Visibility.Visible;
+                Grid.ColumnDefinitions[0].Width = new GridLength(0, GridUnitType.Star);
             }
         }
 

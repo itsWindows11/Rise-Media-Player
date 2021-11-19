@@ -7,6 +7,7 @@
     xmlns:media="using:Microsoft.Toolkit.Uwp.UI.Media"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     xmlns:animatedvisuals="using:Microsoft.UI.Xaml.Controls.AnimatedVisuals"
+    xmlns:uc="using:Rise.App.UserControls"
     xmlns:viewmodels="using:Rise.App.ViewModels"
     d:DataContext="{d:DesignInstance Type=viewmodels:PlaybackViewModel}"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
@@ -129,7 +130,8 @@
                 </Frame.ContentTransitions>
             </Frame>
 
-            <MediaPlayerElement x:Name="Player"
+            <uc:NowPlayingBar IsArtistShown="False" Margin="15" Grid.Row="2" VerticalAlignment="Bottom" Transparent="True" />
+            <!--<MediaPlayerElement x:Name="Player"
                                 Grid.Row="2"
                                 AreTransportControlsEnabled="True"
                                 Height="Auto"
@@ -156,7 +158,7 @@
                                             IsNextTrackButtonVisible="True"
                                             IsPreviousTrackButtonVisible="True" />
                 </MediaPlayerElement.TransportControls>
-            </MediaPlayerElement>
+            </MediaPlayerElement>-->
         </Grid>
     </Grid>
 </Page>
