@@ -40,6 +40,8 @@ namespace Rise.App.UserControls
             DataContext = App.PViewModel;
         }
 
+        #region Listeners
+
         private async void PlaybackSession_PlaybackStateChanged(MediaPlaybackSession sender, object args)
         {
             if (sender.PlaybackState == MediaPlaybackState.Playing)
@@ -78,6 +80,58 @@ namespace Rise.App.UserControls
             });
         }
 
+        private void PlayButton_Click(object sender, RoutedEventArgs e)
+        {
+            TogglePlayPause();
+        }
+
+
+        private async void OverlayButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (ApplicationView.GetForCurrentView().ViewMode != ApplicationViewMode.CompactOverlay)
+            {
+                var preferences = ViewModePreferences.CreateDefault(ApplicationViewMode.CompactOverlay);
+                preferences.CustomSize = new Size(400, 400);
+                bool modeSwitched = await ApplicationView.GetForCurrentView().TryEnterViewModeAsync(ApplicationViewMode.CompactOverlay, preferences);
+                GoToOverlayIcon.Visibility = Visibility.Collapsed;
+                ExitOverlayIcon.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                var preferences = ViewModePreferences.CreateDefault(ApplicationViewMode.CompactOverlay);
+                preferences.CustomSize = new Size(600, 700);
+                bool modeSwitched = await ApplicationView.GetForCurrentView().TryEnterViewModeAsync(ApplicationViewMode.Default, preferences);
+                ExitOverlayIcon.Visibility = Visibility.Collapsed;
+                GoToOverlayIcon.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (Window.Current.Bounds.Width >= 1000)
+            {
+                DefaultVolumeControl.Visibility = Visibility.Visible;
+                VolumeFlyoutButton.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                DefaultVolumeControl.Visibility = Visibility.Collapsed;
+                VolumeFlyoutButton.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void VolumeSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            _player.Volume = VolumeSlider.Value;
+        }
+
+        private void SliderProgress_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+        {
+            _player.PlaybackSession.Position = TimeSpan.FromSeconds(SliderProgress.Value);
+        }
+
+        #endregion
+
         public void TogglePlayPause()
         {
             if (_player.PlaybackSession.PlaybackState == MediaPlaybackState.Paused)
@@ -98,53 +152,5 @@ namespace Rise.App.UserControls
             SongTitle.Text = songTitle;
         }
         #endregion
-
-        private void PlayButton_Click(object sender, RoutedEventArgs e)
-        {
-            TogglePlayPause();
-        }
-
-
-        private async void OverlayButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (ApplicationView.GetForCurrentView().ViewMode != ApplicationViewMode.CompactOverlay)
-            {
-                var preferences = ViewModePreferences.CreateDefault(ApplicationViewMode.CompactOverlay);
-                preferences.CustomSize = new Size(400, 400);
-                bool modeSwitched = await ApplicationView.GetForCurrentView().TryEnterViewModeAsync(ApplicationViewMode.CompactOverlay, preferences);
-                GoToOverlayIcon.Visibility = Visibility.Collapsed;
-                ExitOverlayIcon.Visibility = Visibility.Visible;
-            } else
-            {
-                var preferences = ViewModePreferences.CreateDefault(ApplicationViewMode.CompactOverlay);
-                preferences.CustomSize = new Size(600, 700);
-                bool modeSwitched = await ApplicationView.GetForCurrentView().TryEnterViewModeAsync(ApplicationViewMode.Default, preferences);
-                ExitOverlayIcon.Visibility = Visibility.Collapsed;
-                GoToOverlayIcon.Visibility = Visibility.Visible;
-            }
-        }
-
-        private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            if (Window.Current.Bounds.Width >= 1000)
-            {
-                DefaultVolumeControl.Visibility = Visibility.Visible;
-                VolumeFlyoutButton.Visibility = Visibility.Collapsed;
-            } else
-            {
-                DefaultVolumeControl.Visibility = Visibility.Collapsed;
-                VolumeFlyoutButton.Visibility = Visibility.Visible;
-            }
-        }
-
-        private void VolumeSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
-        {
-            _player.Volume = VolumeSlider.Value;
-        }
-
-        private void SliderProgress_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
-        {
-            _player.PlaybackSession.Position = TimeSpan.FromSeconds(SliderProgress.Value);
-        }
     }
 }
