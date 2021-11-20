@@ -12,6 +12,7 @@
     xmlns:viewmodels="using:Rise.App.ViewModels"
     xmlns:ui="using:Microsoft.Toolkit.Uwp.UI"
     xmlns:media="using:Microsoft.Toolkit.Uwp.UI.Media"
+    xmlns:controls="using:Microsoft.Toolkit.Uwp.UI.Controls"
     SizeChanged="UserControl_SizeChanged">
 
     <UserControl.Resources>
@@ -32,7 +33,13 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Orientation="Horizontal">
-                <Border Background="White" Margin="5" Width="70" Height="70" CornerRadius="5" />
+                <Border x:Name="AlbumArtContainer" Margin="5" Width="70" Height="70" CornerRadius="5">
+                    <Image x:Name="AlbumArt">
+                        <Image.Source>
+                            <BitmapImage UriSource="{Binding CurrentSong.Thumbnail, Mode=OneWay}" />
+                        </Image.Source>
+                    </Image>
+                </Border>
                 <StackPanel VerticalAlignment="Center" Margin="10,0,0,0">
                     <TextBlock Text="{Binding CurrentSong.Title, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" x:Name="SongTitle" />
                     <TextBlock Text="{Binding CurrentSong.Artist, Mode=OneWay}" FontSize="16" x:Name="SongArtist" />
@@ -54,23 +61,11 @@
                             </LinearGradientBrush>
                         </Border.BorderBrush>
                         <Button Height="50" CornerRadius="50" BorderBrush="Transparent" Background="Transparent" Click="PlayButton_Click" x:Name="PlayButton">
-                            <Button.Foreground>
-                                <LinearGradientBrush>
-                                    <GradientStop Color="#F98253" Offset="0.1"/>
-                                    <GradientStop Color="#F98253"/>
-                                    <GradientStop Color="#B61F9C" Offset="0.8"/>
-                                </LinearGradientBrush>
-                            </Button.Foreground>
                             <Button.Resources>
                                 <ResourceDictionary>
                                     <ResourceDictionary.ThemeDictionaries>
                                         <ResourceDictionary x:Key="Dark">
                                             <LinearGradientBrush x:Key="ButtonForegroundPointerOver">
-                                                <GradientStop Color="#F98253" Offset="0.1"/>
-                                                <GradientStop Color="#F98253"/>
-                                                <GradientStop Color="#B61F9C" Offset="0.8"/>
-                                            </LinearGradientBrush>
-                                            <LinearGradientBrush x:Key="ButtonForegroundGotFocus">
                                                 <GradientStop Color="#F98253" Offset="0.1"/>
                                                 <GradientStop Color="#F98253"/>
                                                 <GradientStop Color="#B61F9C" Offset="0.8"/>
@@ -82,16 +77,11 @@
                                                 <GradientStop Color="#F98253"/>
                                                 <GradientStop Color="#B61F9C" Offset="0.8"/>
                                             </LinearGradientBrush>
-                                            <LinearGradientBrush x:Key="ButtonForegroundGotFocus">
-                                                <GradientStop Color="#F98253" Offset="0.1"/>
-                                                <GradientStop Color="#F98253"/>
-                                                <GradientStop Color="#B61F9C" Offset="0.8"/>
-                                            </LinearGradientBrush>
                                         </ResourceDictionary>
                                     </ResourceDictionary.ThemeDictionaries>
                                 </ResourceDictionary>
                             </Button.Resources>
-                            <FontIcon Glyph="&#xF5B0;" FontSize="20" x:Name="PlayButtonIcon" />
+                            <FontIcon Glyph="&#xF5B0;" FontSize="20" Margin="-1,0,0,0" x:Name="PlayButtonIcon" />
                         </Button>
                     </Border>
                     
@@ -107,7 +97,12 @@
             </StackPanel>
 
             <StackPanel Orientation="Vertical" VerticalAlignment="Center" Grid.Column="2" Padding="20,5,0,0">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <controls:WrapPanel Orientation="Horizontal" HorizontalAlignment="Right">
+
+                    <Button HorizontalAlignment="Right" x:Name="VolumeFlyoutButton" BorderBrush="Transparent" Background="Transparent">
+                        <FontIcon Glyph="&#xE767;" />
+                    </Button>
+                    
                     <Button x:Name="OverlayButton"
                     Click="OverlayButton_Click"
                     VerticalAlignment="Stretch"
@@ -142,7 +137,7 @@
                             <SymbolIcon Symbol="More" />
                         </Viewbox>
                     </Button>
-                </StackPanel>
+                </controls:WrapPanel>
                 <RelativePanel Margin="0,15,0,0" x:Name="DefaultVolumeControl">
                     <Viewbox Width="14" Height="14" RelativePanel.AlignVerticalCenterWithPanel="True" x:Name="VolumeIconViewBoxMediaControl">
                         <SymbolIcon Symbol="Volume" />
@@ -151,9 +146,6 @@
                     <TextBlock Text="{x:Bind VolumeSlider.Value, Mode=OneWay}" x:Name="VolumeProgressText" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignVerticalCenterWithPanel="True" Margin="0,-2,10,0" />
                     
                 </RelativePanel>
-                <Button HorizontalAlignment="Right" x:Name="VolumeFlyoutButton" BorderBrush="Transparent" Background="Transparent">
-                    <FontIcon Glyph="&#xE767;" />
-                </Button>
             </StackPanel>
         </Grid>
     </Border>
