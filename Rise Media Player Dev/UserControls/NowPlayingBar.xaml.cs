@@ -28,6 +28,7 @@ using Windows.Storage.Streams;
 using Windows.Graphics.Imaging;
 using ColorThiefDotNet;
 using Windows.UI.Xaml.Media.Imaging;
+using System.ComponentModel;
 
 namespace Rise.App.UserControls
 {
@@ -63,6 +64,7 @@ namespace Rise.App.UserControls
 
             _player.PlaybackSession.PositionChanged += PlaybackSession_PositionChanged;
             _player.PlaybackSession.PlaybackStateChanged += PlaybackSession_PlaybackStateChanged;
+            _player.SourceChanged += MediaPlayer_SourceChanged;
 
             if (!IsArtistShown)
             {
@@ -85,108 +87,44 @@ namespace Rise.App.UserControls
         {
             if (sender.PlaybackState == MediaPlaybackState.Playing)
             {
-                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
                      PlayButtonIcon.Glyph = "\uF8AE";
                 });
             } else
             {
-                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
                     PlayButtonIcon.Glyph = "\uF5B0";
                 });
             }
+        }
 
-            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
+        private async void MediaPlayer_SourceChanged(MediaPlayer sender, object args)
+        {
+            if (!Transparent)
             {
-                var image = (BitmapImage)AlbumArt.Source;
-                RandomAccessStreamReference random = RandomAccessStreamReference.CreateFromUri(image.UriSour‌​ce);
-
-                using (IRandomAccessStream stream = await random.OpenReadAsync())
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
                 {
-                    var decoder = await BitmapDecoder.CreateAsync(stream);
-                    var quantizedColor = await new ColorThief().GetColor(decoder);
-                    var color = quantizedColor.Color;
-
-                    if (quantizedColor.IsDark && ActualTheme == ElementTheme.Dark)
+                    Uri imageUri = new Uri(App.PViewModel.CurrentSong.Thumbnail);
+                    if (App.PViewModel.CurrentSong.Thumbnail != "ms-appx:///Assets/Default.png")
                     {
-                        Grid.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B));
-                    } else if (!quantizedColor.IsDark && ActualTheme == ElementTheme.Light)
-                    {
-                        Grid.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B));
+                        RandomAccessStreamReference random = RandomAccessStreamReference.CreateFromUri(imageUri);
+                        using (IRandomAccessStream stream = await random.OpenReadAsync())
+                        {
+                            var decoder = await BitmapDecoder.CreateAsync(stream);
+                            var colorThief = new ColorThief();
+                            var color = await colorThief.GetColor(decoder);
+                            Grid.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(30, color.Color.R, color.Color.G, color.Color.B));
+                        }
                     }
-                }
-            });
-        }
-
-        private Windows.UI.Color ShiftColor(Windows.UI.Color originalColor, int shiftColorValue)
-        {
-            int maxByte = 255;
-
-            if (shiftColorValue > 255) shiftColorValue = 255;
-
-            if (shiftColorValue < -255) shiftColorValue = -255;
-
-            int alpha = originalColor.A;
-
-            int red = originalColor.R;
-
-            int green = originalColor.G;
-
-            int blue = originalColor.B;
-
-            if (shiftColorValue < 0)
-            {
-                if (alpha > shiftColorValue) { alpha += shiftColorValue; }
-
-                if (red > shiftColorValue) { red += shiftColorValue; }
-
-                if (green > shiftColorValue) { green += shiftColorValue; }
-
-                if (blue > shiftColorValue) { blue += shiftColorValue; }
-            } else if (shiftColorValue > 0)
-            {
-                int maxUpperValue = maxByte - shiftColorValue;
-
-                if (alpha < maxUpperValue) { alpha += shiftColorValue; }
-
-                if (red < maxUpperValue) { red += shiftColorValue; }
-
-                if (green < maxUpperValue) { green += shiftColorValue; }
-
-                if (blue < maxUpperValue) { blue += shiftColorValue; }
+                });
             }
-
-            return Windows.UI.Color.FromArgb(Convert.ToByte(alpha), Convert.ToByte(red), Convert.ToByte(green), Convert.ToByte(blue));
-        }
-
-        private ColorThiefDotNet.QuantizedColor FindLightColor(List<QuantizedColor> palette)
-        {
-            for (int i = 0; i < palette.Count; i++)
-            {
-                if (!palette[i].IsDark)
-                {
-                    return palette[i];
-                }
-            }
-            return null;
-        }
-
-        private ColorThiefDotNet.QuantizedColor FindDarkColor(List<QuantizedColor> palette)
-        {
-            for (int i = 0; i < palette.Count; i++)
-            {
-                if (palette[i].IsDark)
-                {
-                    return palette[i];
-                }
-            }
-            return null;
         }
 
         private async void PlaybackSession_PositionChanged(MediaPlaybackSession sender, object args)
         {
-            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
                 int seconds = (int)sender.NaturalDuration.TotalSeconds;
                 int minutes = (int)sender.NaturalDuration.TotalMinutes;
@@ -198,7 +136,7 @@ namespace Rise.App.UserControls
                 else MediaPlayingDurationRight.Text = $"{minutes}:{seconds}";
             });
 
-            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
                 SliderProgress.Value = sender.Position.TotalSeconds;
                 int seconds = (int)sender.Position.TotalSeconds;
@@ -254,7 +192,7 @@ namespace Rise.App.UserControls
                 DefaultVolumeControl.Visibility = Visibility.Collapsed;
                 VolumeFlyoutButton.Visibility = Visibility.Visible;
                 AlbumArtContainer.Visibility = Visibility.Collapsed;
-                Grid.ColumnDefinitions[0].Width = new GridLength(0.6, GridUnitType.Star);
+                if (IsArtistShown) Grid.ColumnDefinitions[0].Width = new GridLength(0.6, GridUnitType.Star);
                 Grid.ColumnDefinitions[2].Width = new GridLength(0.45, GridUnitType.Star);
             } else if (Window.Current.Bounds.Width >= 400)
             {
@@ -299,12 +237,5 @@ namespace Rise.App.UserControls
                 PlayButtonIcon.Glyph = "\uF5B0";
             }
         }
-
-        #region Getters/Setters
-        public void SetSongTitle(string songTitle)
-        {
-            SongTitle.Text = songTitle;
-        }
-        #endregion
     }
 }

@@ -13,11 +13,13 @@
     xmlns:ui="using:Microsoft.Toolkit.Uwp.UI"
     xmlns:media="using:Microsoft.Toolkit.Uwp.UI.Media"
     xmlns:controls="using:Microsoft.Toolkit.Uwp.UI.Controls"
+    xmlns:converters="using:Rise.App.Converters"
     SizeChanged="UserControl_SizeChanged">
 
     <UserControl.Resources>
         <media:AttachedCardShadow Offset="0,2" x:Name="DropShadow" CornerRadius="8" BlurRadius="30" Opacity=".3" />
         <media:AttachedCardShadow x:Name="EmptyDropShadow" Opacity="1" />
+        <converters:BooleanToArtistColumnVisibility x:Key="BoolToVis" />
     </UserControl.Resources>
 
     <Border x:Name="Parent1" ui:Effects.Shadow="{x:Bind DropShadow}">
@@ -27,7 +29,7 @@
               CornerRadius="8"
               BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width=".6*" x:Name="ArtistColumn" />
+                <ColumnDefinition Width="{x:Bind IsArtistShown, Converter={StaticResource BoolToVis}, Mode=OneWay}" x:Name="ArtistColumn" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width=".45*" x:Name="VolumeColumn" />
             </Grid.ColumnDefinitions>
