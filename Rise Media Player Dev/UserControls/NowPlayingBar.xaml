@@ -43,7 +43,7 @@
                     </Image>
                 </Border>
                 <StackPanel VerticalAlignment="Center" Margin="10,0,0,0">
-                    <TextBlock Text="{Binding CurrentSong.Title, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" x:Name="SongTitle" />
+                    <TextBlock TextTrimming="CharacterEllipsis" Text="{Binding CurrentSong.Title, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" FontWeight="Bold" x:Name="SongTitle" />
                     <TextBlock Text="{Binding CurrentSong.Artist, Mode=OneWay}" FontSize="16" x:Name="SongArtist" />
                 </StackPanel>
             </StackPanel>

@@ -87,13 +87,13 @@ namespace Rise.App.UserControls
         {
             if (sender.PlaybackState == MediaPlaybackState.Playing)
             {
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
                      PlayButtonIcon.Glyph = "\uF8AE";
                 });
             } else
             {
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
                     PlayButtonIcon.Glyph = "\uF5B0";
                 });
@@ -102,9 +102,9 @@ namespace Rise.App.UserControls
 
         private async void MediaPlayer_SourceChanged(MediaPlayer sender, object args)
         {
-            if (!Transparent)
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
             {
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
+                if (!Transparent)
                 {
                     Uri imageUri = new Uri(App.PViewModel.CurrentSong.Thumbnail);
                     if (App.PViewModel.CurrentSong.Thumbnail != "ms-appx:///Assets/Default.png")
@@ -118,34 +118,26 @@ namespace Rise.App.UserControls
                             Grid.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(30, color.Color.R, color.Color.G, color.Color.B));
                         }
                     }
-                });
-            }
+                }
+            });
         }
 
         private async void PlaybackSession_PositionChanged(MediaPlaybackSession sender, object args)
         {
-            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
                 int seconds = (int)sender.NaturalDuration.TotalSeconds;
                 int minutes = (int)sender.NaturalDuration.TotalMinutes;
                 SliderProgress.Maximum = sender.NaturalDuration.TotalSeconds;
-                if (seconds < 10)
-                {
-                    MediaPlayingDurationRight.Text = $"{minutes}:0{seconds}";
-                }
-                else MediaPlayingDurationRight.Text = $"{minutes}:{seconds}";
+                MediaPlayingDurationRight.Text = TimeSpan.FromSeconds(seconds).ToString();
             });
 
-            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
                 SliderProgress.Value = sender.Position.TotalSeconds;
                 int seconds = (int)sender.Position.TotalSeconds;
                 int minutes = (int)sender.Position.TotalMinutes;
-                if (seconds < 10)
-                {
-                    MediaPlayingDurationLeft.Text = $"{minutes}:0{seconds}";
-                }
-                else MediaPlayingDurationLeft.Text = $"{minutes}:{seconds}";
+                MediaPlayingDurationLeft.Text = TimeSpan.FromSeconds(seconds).ToString();
             });
         }
 
