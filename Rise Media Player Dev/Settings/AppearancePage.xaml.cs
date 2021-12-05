@@ -1,6 +1,6 @@
 ﻿using Rise.App.Common;
 using Rise.App.Dialogs;
-using Rise.App.Settings.ViewModels;
+using Rise.App.ViewModels;
 using System.Collections.Generic;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -19,25 +19,29 @@ namespace Rise.App.Settings
             ResourceLoaders.AppearanceLoader.GetString("System")
         };
 
+        private readonly List<string> ColorThemes = new List<string>
+        {
+            "No glaze",
+            "Use system accent colour",
+            "Use custom colour",
+            "Use album art"
+        };
+
         private readonly List<string> Startup = new List<string>
         {
             ResourceLoaders.AppearanceLoader.GetString("Home"),
+            ResourceLoaders.AppearanceLoader.GetString("NowPlaying"),
             ResourceLoaders.AppearanceLoader.GetString("Playlists"),
-            ResourceLoaders.AppearanceLoader.GetString("Devices"),
             ResourceLoaders.AppearanceLoader.GetString("Songs"),
             ResourceLoaders.AppearanceLoader.GetString("Artists"),
             ResourceLoaders.AppearanceLoader.GetString("Albums"),
             ResourceLoaders.AppearanceLoader.GetString("Genres"),
             ResourceLoaders.AppearanceLoader.GetString("LocalVideos"),
-            ResourceLoaders.AppearanceLoader.GetString("Streaming"),
-            ResourceLoaders.AppearanceLoader.GetString("NowPlaying")
         };
 
         public AppearancePage()
         {
             InitializeComponent();
-
-            DataContext = ViewModel;
             NavigationCacheMode = NavigationCacheMode.Enabled;
         }
 
@@ -47,6 +51,35 @@ namespace Rise.App.Settings
 
             SettingsDialogContainer.Breadcrumbs.
                 Add(ResourceLoaders.AppearanceLoader.GetString("Sidebar"));
+        }
+
+        private void ColorThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            switch (ColorThemeComboBox.SelectedIndex)
+            {
+                case 0:
+                    RiseColorsStackPanel.Visibility = Visibility.Collapsed;
+                    ViewModel.Color = -1;
+                    break;
+
+                case 1:
+                    RiseColorsStackPanel.Visibility = Visibility.Collapsed;
+                    ViewModel.Color = -2;
+                    break;
+
+                case 2:
+                    RiseColorsStackPanel.Visibility = Visibility.Visible;
+                    if (ViewModel.Color < 0)
+                    {
+                        ViewModel.Color = 0;
+                    }
+                    break;
+
+                case 3:
+                    RiseColorsStackPanel.Visibility = Visibility.Collapsed;
+                    ViewModel.Color = -3;
+                    break;
+            }
         }
     }
 }

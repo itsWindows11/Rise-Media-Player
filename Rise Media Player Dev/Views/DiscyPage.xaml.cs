@@ -1,24 +1,23 @@
 ﻿using Rise.App.Common;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
+using static Rise.App.Common.Enums;
 
 namespace Rise.App.Views
 {
     public sealed partial class DiscyPage : Page
     {
-        private readonly NavigationHelper navigationHelper;
         /// <summary>
         /// Gets the <see cref="NavigationHelper"/> associated with this <see cref="Page"/>.
         /// </summary>
-        public NavigationHelper NavigationHelper
-        {
-            get { return navigationHelper; }
-        }
+        private readonly NavigationHelper _navigationHelper;
 
         public DiscyPage()
         {
             InitializeComponent();
-            navigationHelper = new NavigationHelper(this);
+            NavigationCacheMode = NavigationCacheMode.Enabled;
+
+            _navigationHelper = new NavigationHelper(this);
         }
 
         #region NavigationHelper registration
@@ -32,10 +31,19 @@ namespace Rise.App.Views
         /// in addition to page state preserved during an earlier session.
         /// </summary>
         protected override void OnNavigatedTo(NavigationEventArgs e)
-            => navigationHelper.OnNavigatedTo(e);
+            => _navigationHelper.OnNavigatedTo(e);
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
-            => navigationHelper.OnNavigatedFrom(e);
+            => _navigationHelper.OnNavigatedFrom(e);
         #endregion
+
+        private void Discy_PointerPressed(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            DiscyAboutTip.IsOpen = true;
+        }
+
+        private async void LearnMoreButton_Click(object sender, Windows.UI.Xaml.RoutedEventArgs e) => await URLs.Readme.LaunchAsync();
+
+        private async void AppSettingsHyperlink_Click(Windows.UI.Xaml.Documents.Hyperlink sender, Windows.UI.Xaml.Documents.HyperlinkClickEventArgs args) => _ = await MainPage.Current.SDialog.ShowAsync(ExistingDialogOptions.CloseExisting);
     }
 }
