@@ -153,7 +153,6 @@
 
                     <VisualState.Setters>
                         <Setter Target="MediaControls.IsCompact" Value="False" />
-                        <Setter Target="PlayerElement.Height" Value="120" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -280,7 +279,12 @@
                         </Frame.ContentTransitions>
                     </Frame>
 
-                    <MediaPlayerElement x:Name="PlayerElement"
+                    <uc:NowPlayingBar BackgroundStyle="UseAlbumArt"
+                                      IsArtistShown="True" 
+                                      VerticalAlignment="Bottom"
+                                      Margin="20" />
+
+                    <!--<MediaPlayerElement x:Name="PlayerElement"
                                         animations:Connected.Key="Player"
                                         AreTransportControlsEnabled="True"
                                         Height="120"
@@ -309,7 +313,7 @@
                                                     IsPreviousTrackButtonVisible="True"
                                                     ShowAndHideAutomatically="False" />
                         </MediaPlayerElement.TransportControls>
-                    </MediaPlayerElement>
+                    </MediaPlayerElement>-->
                 </Grid>
             </Grid>
         </muxc:NavigationView>
