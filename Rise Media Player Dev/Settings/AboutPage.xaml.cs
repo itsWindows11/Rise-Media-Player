@@ -1,5 +1,7 @@
-﻿using Rise.App.Common;
-using Rise.App.Dialogs;
+﻿using Rise.App.Dialogs;
+using Rise.Common;
+using Rise.Common.Constants;
+using Rise.Common.Extensions;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -9,7 +11,7 @@ namespace Rise.App.Settings
 {
     public sealed partial class AboutPage : Page
     {
-        private readonly DataPackage VersionData = new DataPackage();
+        private readonly DataPackage VersionData = new();
 
         public AboutPage()
         {
@@ -17,7 +19,7 @@ namespace Rise.App.Settings
             NavigationCacheMode = NavigationCacheMode.Enabled;
 
             VersionData.RequestedOperation = DataPackageOperation.Copy;
-            VersionData.SetText("Pre-Alpha 3 - v0.0.13.0");
+            VersionData.SetText("Alpha Preview 2 - 0.0.170.0");
         }
 
         private async void ExpanderControl_Click(object sender, RoutedEventArgs e)
@@ -30,6 +32,15 @@ namespace Rise.App.Settings
             {
                 case "Insider":
                     _ = Frame.Navigate(typeof(InsiderPage));
+                    try
+                    {
+                        AllSettingsPage.Current.MainSettingsHeaderIcon.Glyph = "\uF1AD";
+                        AllSettingsPage.Current.MainSettingsHeader.Text = "Insider Hub";
+                    }
+                    catch
+                    {
+
+                    }
                     SettingsDialogContainer.Breadcrumbs.Add
                         (ResourceLoaders.SidebarLoader.GetString("Ins"));
                     break;
@@ -37,6 +48,7 @@ namespace Rise.App.Settings
                 case "Version":
                     vTip.IsOpen = true;
                     break;
+
             }
         }
 

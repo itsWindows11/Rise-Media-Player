@@ -1,16 +1,19 @@
-﻿using Rise.App.Common;
-using Rise.App.Dialogs;
+﻿using Rise.App.Dialogs;
 using Rise.App.UserControls;
+using Rise.App.Web;
+using Rise.Common.Constants;
+using Rise.Common.Extensions;
+using Rise.Common.Helpers;
+using System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
-using static Rise.App.Common.Enums;
 
 namespace Rise.App.Views
 {
     public sealed partial class HomePage : Page
     {
-        private static readonly FeatureDialog _dialog = new FeatureDialog();
+        private static readonly FeatureDialog _dialog = new();
 
         /// <summary>
         /// Gets the <see cref="NavigationHelper"/> associated with this <see cref="Page"/>.
@@ -28,8 +31,18 @@ namespace Rise.App.Views
         private async void ContributeButton_Click(object sender, RoutedEventArgs e)
             => _ = await URLs.GitHub.LaunchAsync();
 
+        private async void SupportButton_Click(object sender, RoutedEventArgs e)
+            => _ = await typeof(SupportProject).PlaceInWindowAsync(Windows.UI.ViewManagement.ApplicationViewMode.Default, 500, 600, true);
+
         private async void FoldersButton_Click(object sender, RoutedEventArgs e)
-            => _ = await MainPage.Current.SDialog.ShowAsync(ExistingDialogOptions.CloseExisting);
+        {
+            ContentDialog dialog = new ContentDialog();
+            dialog.Title = "Manage local media folders";
+            dialog.CloseButtonText = "Close";
+            dialog.Content = new Settings.MediaSourcesPage();
+            var result = await dialog.ShowAsync();
+
+        }
 
         #region NavigationHelper registration
         /// <summary>
@@ -53,5 +66,46 @@ namespace Rise.App.Views
             var item = e.ClickedItem as TiledImage;
             await _dialog.OpenFeatureAsync(int.Parse(item.Tag.ToString()));
         }
+
+        //private void CommandBarButton_Click(object sender, RoutedEventArgs e)
+        //{
+        //    Button button = sender as Button;
+        //    switch (button.Tag.ToString())
+        //    {
+
+        //        case "Version":
+        //            vTip.IsOpen = true;
+        //            break;
+        //        case "Discy":
+        //            DiscyOnHome.IsOpen = true;
+        //            break;
+        //        default:
+        //            break;
+        //    }
+        //}
+
+        private void VTip_CloseButtonClick(Microsoft.UI.Xaml.Controls.TeachingTip sender, object args)
+        {
+
+        }
+
+        private async void VTip_ActionButtonClick(Microsoft.UI.Xaml.Controls.TeachingTip sender, object args)
+            => await URLs.Releases.LaunchAsync();
+
+        private async void GlanceManage_Click(object sender, RoutedEventArgs e)
+        {
+            ContentDialog dialog = new()
+            {
+                CloseButtonText = "Close",
+                DefaultButton = ContentDialogButton.Primary,
+                Content = new WidgetsDialogContent()
+            };
+
+            var result = await dialog.ShowAsync();
+        }
+
+        private async void WhatsNew_Click(object sender, RoutedEventArgs e)
+            => _ = await typeof(WhatsNew).PlaceInWindowAsync(Windows.UI.ViewManagement.ApplicationViewMode.Default, 500, 600, true);
+
     }
 }

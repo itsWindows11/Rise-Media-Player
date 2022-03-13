@@ -1,9 +1,12 @@
-﻿using Rise.App.Common;
-using Rise.App.Dialogs;
+﻿using Rise.App.Dialogs;
 using Rise.App.ViewModels;
+using Rise.Common;
+using System;
 using System.Collections.Generic;
+using Windows.ApplicationModel.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
 namespace Rise.App.Settings
@@ -12,14 +15,14 @@ namespace Rise.App.Settings
     {
         private SettingsViewModel ViewModel => App.SViewModel;
 
-        private readonly List<string> Themes = new List<string>
+        private readonly List<string> Themes = new()
         {
             ResourceLoaders.AppearanceLoader.GetString("Light"),
             ResourceLoaders.AppearanceLoader.GetString("Dark"),
             ResourceLoaders.AppearanceLoader.GetString("System")
         };
 
-        private readonly List<string> ColorThemes = new List<string>
+        private readonly List<string> ColorThemes = new()
         {
             "No glaze",
             "Use system accent colour",
@@ -27,22 +30,30 @@ namespace Rise.App.Settings
             "Use album art"
         };
 
-        private readonly List<string> Startup = new List<string>
-        {
-            ResourceLoaders.AppearanceLoader.GetString("Home"),
-            ResourceLoaders.AppearanceLoader.GetString("NowPlaying"),
-            ResourceLoaders.AppearanceLoader.GetString("Playlists"),
-            ResourceLoaders.AppearanceLoader.GetString("Songs"),
-            ResourceLoaders.AppearanceLoader.GetString("Artists"),
-            ResourceLoaders.AppearanceLoader.GetString("Albums"),
-            ResourceLoaders.AppearanceLoader.GetString("Genres"),
-            ResourceLoaders.AppearanceLoader.GetString("LocalVideos"),
-        };
-
         public AppearancePage()
         {
             InitializeComponent();
             NavigationCacheMode = NavigationCacheMode.Enabled;
+            ChangeThemeTip.IsOpen = false;
+
+            foreach (Border border in RiseColorsPanel.Children)
+            {
+                border.PointerPressed += ColorBorder_PointerPressed;
+            }
+        }
+
+        private void ColorBorder_PointerPressed(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            Border border = (Border)sender;
+
+            ViewModel.Color = RiseColorsPanel.Children.IndexOf(border);
+            foreach (Border border1 in RiseColorsPanel.Children)
+            {
+                border1.BorderBrush = new SolidColorBrush();
+                border1.BorderThickness = new Thickness(0);
+            }
+            border.BorderBrush = (Brush)Resources["SystemControlForegroundChromeWhiteBrush"];
+            border.BorderThickness = new Thickness(3);
         }
 
         private void SidebarCustomize_Click(object sender, RoutedEventArgs e)
@@ -58,28 +69,60 @@ namespace Rise.App.Settings
             switch (ColorThemeComboBox.SelectedIndex)
             {
                 case 0:
-                    RiseColorsStackPanel.Visibility = Visibility.Collapsed;
+                    Nothing.Visibility = Visibility.Visible;
+                    Therest.Visibility = Visibility.Collapsed;
+                    TextforGlaze.Visibility = Visibility.Collapsed;
+                    RiseColorsPanel.Visibility = Visibility.Collapsed;
                     ViewModel.Color = -1;
                     break;
 
                 case 1:
-                    RiseColorsStackPanel.Visibility = Visibility.Collapsed;
+                    Nothing.Visibility = Visibility.Visible;
+                    Therest.Visibility = Visibility.Collapsed;
+                    TextforGlaze.Visibility = Visibility.Collapsed;
+                    RiseColorsPanel.Visibility = Visibility.Collapsed;
                     ViewModel.Color = -2;
                     break;
 
                 case 2:
-                    RiseColorsStackPanel.Visibility = Visibility.Visible;
+                    Nothing.Visibility = Visibility.Collapsed;
+                    Therest.Visibility = Visibility.Visible;
+                    TextforGlaze.Visibility = Visibility.Visible;
+                    RiseColorsPanel.Visibility = Visibility.Visible;
                     if (ViewModel.Color < 0)
                     {
                         ViewModel.Color = 0;
                     }
+                    foreach (Border border in RiseColorsPanel.Children)
+                    {
+                        border.BorderBrush = new SolidColorBrush();
+                        border.BorderThickness = new Thickness(0);
+                        if (ViewModel.Color == RiseColorsPanel.Children.IndexOf(border))
+                        {
+                            border.BorderBrush = (Brush)Resources["SystemControlForegroundChromeWhiteBrush"];
+                            border.BorderThickness = new Thickness(3);
+                        }
+                    }
                     break;
 
                 case 3:
-                    RiseColorsStackPanel.Visibility = Visibility.Collapsed;
+                    Nothing.Visibility = Visibility.Visible;
+                    Therest.Visibility = Visibility.Collapsed;
+                    TextforGlaze.Visibility = Visibility.Collapsed;
+                    RiseColorsPanel.Visibility = Visibility.Collapsed;
                     ViewModel.Color = -3;
                     break;
             }
+        }
+
+        private async void ChangeThemeTip_ActionButtonClick(Microsoft.UI.Xaml.Controls.TeachingTip sender, object args)
+        {
+            await CoreApplication.RequestRestartAsync("Theme changed");
+        }
+
+        private void ThemeChange_DropDownClosed(object sender, object e)
+        {
+            ChangeThemeTip.IsOpen = true;
         }
     }
 }

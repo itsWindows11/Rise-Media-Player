@@ -1,15 +1,15 @@
 ﻿using Rise.App.ViewModels;
+using Rise.Common.Enums;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Markup;
-using static Rise.App.Common.Enums;
 
 namespace Rise.App.UserControls
 {
     [ContentProperty(Name = "Controls")]
     public sealed partial class ExpanderControl : UserControl
     {
-        private readonly ExpanderViewModel ViewModel = new ExpanderViewModel();
+        private readonly ExpanderViewModel ViewModel = new();
 
         public ExpanderControl()
         {

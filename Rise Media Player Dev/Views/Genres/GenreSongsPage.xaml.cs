@@ -1,6 +1,7 @@
 ﻿using Microsoft.Toolkit.Uwp.UI;
-using Rise.App.Common;
 using Rise.App.ViewModels;
+using Rise.Common.Extensions;
+using Rise.Common.Helpers;
 using System;
 using System.Linq;
 using Windows.UI.Xaml;
@@ -49,6 +50,8 @@ namespace Rise.App.Views
         private AdvancedCollectionView Songs => MViewModel.FilteredSongs;
         private AdvancedCollectionView Albums => MViewModel.FilteredAlbums;
         private AdvancedCollectionView Artists => MViewModel.FilteredArtists;
+        private readonly AdvancedCollectionView AllArtistsInGenre = new();
+        private readonly AdvancedCollectionView AllAlbumsInGenre = new();
 
         private string SortProperty = "Title";
         private SortDirection CurrentSort = SortDirection.Ascending;
@@ -115,7 +118,7 @@ namespace Rise.App.Views
             }
             else if (e.NavigationParameter is string str)
             {
-                SelectedGenre = App.MViewModel.Genres.First(g => g.Name == str);
+                SelectedGenre = App.MViewModel.Genres.FirstOrDefault(g => g.Name == str);
                 Songs.Filter = s => ((SongViewModel)s).Genres.Contains(str);
                 Albums.Filter = a => ((AlbumViewModel)a).Genres.Contains(str);
             }
@@ -125,6 +128,16 @@ namespace Rise.App.Views
 
             Albums.SortDescriptions.Clear();
             Albums.SortDescriptions.Add(new SortDescription("Title", SortDirection.Ascending));
+
+            foreach (ArtistViewModel artist in Artists)
+            {
+                AllArtistsInGenre.AddIfNotExists(artist);
+            }
+
+            foreach (AlbumViewModel album in Albums)
+            {
+                AllArtistsInGenre.Filter = a => album.Artist == ((ArtistViewModel)a).Name;
+            }
         }
 
         #region Event handlers
@@ -147,11 +160,11 @@ namespace Rise.App.Views
         }
 
         private async void Props_Click(object sender, RoutedEventArgs e)
-            => await SelectedSong.StartEdit();
+            => await SelectedSong.StartEditAsync();
 
         private async void EditButton_Click(object sender, RoutedEventArgs e)
         {
-            await SelectedSong.StartEdit();
+            await SelectedSong.StartEditAsync();
             SelectedSong = null;
         }
 
@@ -262,6 +275,60 @@ namespace Rise.App.Views
         protected override void OnNavigatedFrom(NavigationEventArgs e)
             => _navigationHelper.OnNavigatedFrom(e);
         #endregion
+
+        private void AlbumGrid_RightTapped(object sender, RightTappedRoutedEventArgs e)
+        {
+            if ((e.OriginalSource as FrameworkElement).DataContext is AlbumViewModel album)
+            {
+                AlbumFlyout.ShowAt(AlbumGrid, e.GetPosition(AlbumGrid));
+            }
+        }
+
+        private void ArtistGrid_RightTapped(object sender, RightTappedRoutedEventArgs e)
+        {
+            if ((e.OriginalSource as FrameworkElement).DataContext is ArtistViewModel artist)
+            {
+                ArtistFlyout.ShowAt(ArtistGrid, e.GetPosition(ArtistGrid));
+            }
+        }
+
+        private void NavigationView_ItemInvoked(Microsoft.UI.Xaml.Controls.NavigationView sender, Microsoft.UI.Xaml.Controls.NavigationViewItemInvokedEventArgs args)
+        {
+            switch (args.InvokedItem)
+            {
+                case "Songs":
+                    MainList.Visibility = Visibility.Visible;
+                    AlbumGrid.Visibility = Visibility.Collapsed;
+                    ArtistGrid.Visibility = Visibility.Collapsed;
+                    break;
+                case "Albums":
+                    MainList.Visibility = Visibility.Collapsed;
+                    AlbumGrid.Visibility = Visibility.Visible;
+                    ArtistGrid.Visibility = Visibility.Collapsed;
+                    break;
+                case "Artists":
+                    MainList.Visibility = Visibility.Collapsed;
+                    AlbumGrid.Visibility = Visibility.Collapsed;
+                    ArtistGrid.Visibility = Visibility.Visible;
+                    break;
+            }
+        }
+
+        private void ArtistGrid_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            if ((e?.OriginalSource as FrameworkElement).DataContext is ArtistViewModel artist)
+            {
+                MainPage.Current.ContentFrame.Navigate(typeof(ArtistSongsPage), artist.Model.Id);
+            }
+        }
+
+        private void AlbumGrid_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            if ((e?.OriginalSource as FrameworkElement).DataContext is AlbumViewModel album)
+            {
+                MainPage.Current.ContentFrame.Navigate(typeof(AlbumSongsPage), album.Model.Id);
+            }
+        }
     }
 
     [ContentProperty(Name = "GenreTemplate")]

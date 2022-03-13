@@ -1,8 +1,11 @@
 ﻿using Microsoft.Toolkit.Uwp.UI;
-using Rise.App.Common;
+using Rise.App.Dialogs;
 using Rise.App.ViewModels;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Rise.Common.Helpers;
+using System;
+using System.Diagnostics;
+using Windows.Storage;
+using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Documents;
@@ -20,11 +23,16 @@ namespace Rise.App.Views
         private MainViewModel MViewModel => App.MViewModel;
 
         /// <summary>
+        /// Gets the app-wide SViewModel instance.
+        /// </summary>
+        private SettingsViewModel SViewModel => App.SViewModel;
+
+        /// <summary>
         /// Gets the <see cref="NavigationHelper"/> associated with this <see cref="Page"/>.
         /// </summary>
         private readonly NavigationHelper _navigationHelper;
-        private SongViewModel _song;
 
+        private SongViewModel _song;
         private SongViewModel SelectedSong
         {
             get => MViewModel.SelectedSong;
@@ -42,8 +50,72 @@ namespace Rise.App.Views
             InitializeComponent();
             NavigationCacheMode = NavigationCacheMode.Enabled;
 
+            Loaded += SongsPage_Loaded;
             _navigationHelper = new NavigationHelper(this);
             _navigationHelper.LoadState += NavigationHelper_LoadState;
+            ApplySettings();
+        }
+
+        private void SongsPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            AddTo.Items.Clear();
+
+            MenuFlyoutItem newPlaylistItem = new()
+            {
+                Text = "New playlist",
+                Icon = new FontIcon
+                {
+                    Glyph = "\uE93F",
+                    FontFamily = new Windows.UI.Xaml.Media.FontFamily("ms-appx:///Assets/MediaPlayerIcons.ttf#Media Player Fluent Icons")
+                }
+            };
+
+            newPlaylistItem.Click += NewPlaylistItem_Click;
+
+            AddTo.Items.Add(newPlaylistItem);
+
+            if (App.MViewModel.Playlists.Count > 0)
+            {
+                AddTo.Items.Add(new MenuFlyoutSeparator());
+            }
+
+            foreach (PlaylistViewModel playlist in App.MViewModel.Playlists)
+            {
+                MenuFlyoutItem item = new()
+                {
+                    Text = playlist.Title,
+                    Icon = new FontIcon
+                    {
+                        Glyph = "\uE93F",
+                        FontFamily = new Windows.UI.Xaml.Media.FontFamily("ms-appx:///Assets/MediaPlayerIcons.ttf#Media Player Fluent Icons")
+                    },
+                    Tag = playlist
+                };
+
+                item.Click += Item_Click;
+
+                AddTo.Items.Add(item);
+            }
+        }
+
+        private async void NewPlaylistItem_Click(object sender, RoutedEventArgs e)
+        {
+            PlaylistViewModel playlist = new()
+            {
+                Title = $"Untitled Playlist #{App.MViewModel.Playlists.Count + 1}",
+                Description = "",
+                Icon = "ms-appx:///Assets/NavigationView/PlaylistsPage/blankplaylist.png",
+                Duration = "0"
+            };
+
+            // This will automatically save the playlist to the db
+            await playlist.AddSongAsync(SelectedSong);
+        }
+
+        private async void Item_Click(object sender, RoutedEventArgs e)
+        {
+            PlaylistViewModel playlist = (sender as MenuFlyoutItem).Tag as PlaylistViewModel;
+            await playlist.AddSongAsync(SelectedSong);
         }
 
         private void NavigationHelper_LoadState(object sender, LoadStateEventArgs e)
@@ -52,6 +124,11 @@ namespace Rise.App.Views
             Songs.SortDescriptions.Clear();
             Songs.SortDescriptions.Add(new SortDescription(SortProperty, CurrentSort));
             Songs.Refresh();
+        }
+
+        private void AskDiscy_Click(object sender, RoutedEventArgs e)
+        {
+            DiscyOnSong.IsOpen = true;
         }
 
         #region Event handlers
@@ -74,7 +151,7 @@ namespace Rise.App.Views
         }
 
         private async void Props_Click(object sender, RoutedEventArgs e)
-            => await SelectedSong.StartEdit();
+            => await SelectedSong.StartEditAsync();
 
         private void ShowArtist_Click(object sender, RoutedEventArgs e)
             => _ = Frame.Navigate(typeof(ArtistSongsPage), SelectedSong.Artist);
@@ -84,7 +161,7 @@ namespace Rise.App.Views
 
         private async void EditButton_Click(object sender, RoutedEventArgs e)
         {
-            await SelectedSong.StartEdit();
+            await SelectedSong.StartEditAsync();
             SelectedSong = null;
         }
 
@@ -134,7 +211,7 @@ namespace Rise.App.Views
         }
 
         private async void ShuffleButton_Click(object sender, RoutedEventArgs e)
-            => await EventsLogic.StartMusicPlaybackAsync(0, true);
+            => await EventsLogic.StartMusicPlaybackAsync(new Random().Next(0, Songs.Count), true);
 
         private void Grid_PointerEntered(object sender, PointerRoutedEventArgs e)
             => EventsLogic.FocusSong(ref _song, e);
@@ -165,5 +242,116 @@ namespace Rise.App.Views
         protected override void OnNavigatedFrom(NavigationEventArgs e)
             => _navigationHelper.OnNavigatedFrom(e);
         #endregion
+
+        private void ApplySettings()
+        {
+            if (SViewModel.ShowDurationInSongs)
+            {
+                foreach (SongViewModel song in Songs)
+                {
+                    song.IsDurationVisible = true;
+                }
+            }
+            else
+            {
+                foreach (SongViewModel song in Songs)
+                {
+                    song.IsDurationVisible = false;
+                }
+            }
+
+            if (SViewModel.ShowTrackNumberInSongs)
+            {
+                foreach (SongViewModel song in Songs)
+                {
+                    song.IsTrackNumberVisible = true;
+                }
+            }
+            else
+            {
+                foreach (SongViewModel song in Songs)
+                {
+                    song.IsTrackNumberVisible = false;
+                }
+            }
+        }
+
+        private void ShowTrackNumber_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleMenuFlyoutItem item = sender as ToggleMenuFlyoutItem;
+            if (item.IsChecked)
+            {
+                foreach (SongViewModel song in Songs)
+                {
+                    song.IsTrackNumberVisible = true;
+                }
+            }
+            else
+            {
+                foreach (SongViewModel song in Songs)
+                {
+                    song.IsTrackNumberVisible = false;
+                }
+            }
+        }
+
+        private void ShowDuration_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleMenuFlyoutItem item = sender as ToggleMenuFlyoutItem;
+            if (item.IsChecked)
+            {
+                foreach (SongViewModel song in Songs)
+                {
+                    song.IsDurationVisible = true;
+                }
+            }
+            else
+            {
+                foreach (SongViewModel song in Songs)
+                {
+                    song.IsDurationVisible = false;
+                }
+            }
+        }
+
+        private async void PlayFromUrl_Click(object sender, RoutedEventArgs e)
+        {
+            _ = await new MusicStreamingDialog().ShowAsync();
+        }
+
+        private void AppBarButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (Window.Current.Content is Frame rootFrame)
+            {
+                _ = rootFrame.Navigate(typeof(NoMediaFound));
+            }
+        }
+
+        private async void AddFolders_Click(object sender, RoutedEventArgs e)
+        {
+            ContentDialog dialog = new ContentDialog();
+            dialog.Title = "Manage local media folders";
+            dialog.CloseButtonText = "Close";
+            dialog.Content = new Settings.MediaSourcesPage();
+            var result = await dialog.ShowAsync();
+        }
+
+        private async void ShowinFE_Click(object sender, RoutedEventArgs e)
+        {
+            string folderlocation = SelectedSong.Location;
+            string filename = SelectedSong.Filename;
+            string result = folderlocation.Replace(filename, "");
+            Debug.WriteLine(result);
+
+            try
+            {
+                StorageFolder folder = await StorageFolder.GetFolderFromPathAsync(result);
+                await Launcher.LaunchFolderAsync(folder);
+            }
+            catch
+            {
+
+            }
+        }
     }
 }

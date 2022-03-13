@@ -1,8 +1,10 @@
-﻿using Rise.App.Common;
-using Rise.App.ViewModels;
+﻿using Rise.App.ViewModels;
+using Rise.Common.Helpers;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Media;
 
 namespace Rise.App.Views
 {
@@ -16,50 +18,69 @@ namespace Rise.App.Views
         private PlaybackViewModel ViewModel => App.PViewModel;
         private VideoViewModel CurrentVideo => ViewModel.CurrentVideo;
 
-        private DependencyPropertyWatcher<string> _watcher;
+        private bool _currentlyFocusedOnPlaybackControls = false;
+
+        public static VideoPlaybackPage Current;
 
         public VideoPlaybackPage()
         {
             InitializeComponent();
-            PlayerElement.SetMediaPlayer(ViewModel.Player);
 
             _navigationHelper = new NavigationHelper(this);
 
-            Loaded += VideoPlaybackPage_Loaded;
-            Unloaded += VideoPlaybackPage_Unloaded;
+            PlayerElement.SetMediaPlayer(App.PViewModel.Player);
+            DataContext = ViewModel;
+            Current = this;
         }
 
-        private void VideoPlaybackPage_Loaded(object sender, RoutedEventArgs e)
+        private async void Page_PointerExited(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
         {
-            _ = new ApplicationTitleBar(AppTitleBar);
-            Grid panelGrid = MediaControls.FindVisualChild<Grid>("ControlPanelGrid");
-
-            if (panelGrid != null)
+            if (Player.Visibility == Visibility.Visible && TopGrid.Visibility == Visibility.Visible && !_currentlyFocusedOnPlaybackControls)
             {
-                Transform render = panelGrid.RenderTransform;
-
-                _watcher = new DependencyPropertyWatcher<string>(render, "Y");
-                _watcher.PropertyChanged += Watcher_PropertyChanged;
+                await Task.Run(async () =>
+                {
+                    Thread.Sleep(3500);
+                    await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                    {
+                        ExitPointerStoryboard.Begin();
+                        Player.Visibility = Visibility.Collapsed;
+                        TopGrid.Visibility = Visibility.Collapsed;
+                    });
+                });
             }
         }
 
-        private void VideoPlaybackPage_Unloaded(object sender, RoutedEventArgs e)
+        private async void Page_PointerMoved(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
         {
-            _watcher.PropertyChanged -= Watcher_PropertyChanged;
-            _watcher.Dispose();
+            if (Player.Visibility == Visibility.Collapsed && TopGrid.Visibility == Visibility.Collapsed)
+            {
+                EnterPointerStoryboard.Begin();
+                Player.Visibility = Visibility.Visible;
+                TopGrid.Visibility = Visibility.Visible;
+                if (!_currentlyFocusedOnPlaybackControls)
+                {
+                    await Task.Run(async () =>
+                    {
+                        Thread.Sleep(3500);
+                        await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                        {
+                            ExitPointerStoryboard.Begin();
+                            Player.Visibility = Visibility.Collapsed;
+                            TopGrid.Visibility = Visibility.Collapsed;
+                        });
+                    });
+                }
+            }
         }
 
-        private void Watcher_PropertyChanged(object sender, DependencyPropertyChangedEventArgs e)
+        private void TopGrid_PointerEntered(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
         {
-            double val = double.Parse(e.NewValue.ToString());
-            if (val == 50)
-            {
-                TopGrid.Margin = new Thickness(0, -48, 0, 0);
-            }
-            else if (val == 0.5)
-            {
-                TopGrid.Margin = new Thickness(0);
-            }
+            _currentlyFocusedOnPlaybackControls = true;
+        }
+
+        private void TopGrid_PointerExited(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            _currentlyFocusedOnPlaybackControls = false;
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Toolkit.Uwp.UI;
-using Rise.App.Common;
 using Rise.App.ViewModels;
+using Rise.Common.Helpers;
+using System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -26,6 +27,8 @@ namespace Rise.App.Views
             set => SetValue(SelectedGenreProperty, value);
         }
 
+        private bool IsCtrlPressed;
+
         /// <summary>
         /// Gets the <see cref="NavigationHelper"/> associated with this <see cref="Page"/>.
         /// </summary>
@@ -42,10 +45,20 @@ namespace Rise.App.Views
         #region Event handlers
         private void GridView_Tapped(object sender, TappedRoutedEventArgs e)
         {
-            SelectedGenre = null;
-            if ((e.OriginalSource as FrameworkElement).DataContext is GenreViewModel genre)
+            if (!KeyboardHelpers.IsCtrlPressed())
             {
-                _ = Frame.Navigate(typeof(GenreSongsPage), genre);
+                if ((e.OriginalSource as FrameworkElement).DataContext is GenreViewModel genre)
+                {
+                    _ = Frame.Navigate(typeof(GenreSongsPage), genre);
+                    SelectedGenre = null;
+                }
+            }
+            else
+            {
+                if ((e.OriginalSource as FrameworkElement).DataContext is GenreViewModel genre)
+                {
+                    SelectedGenre = genre;
+                }
             }
         }
         #endregion
@@ -66,5 +79,14 @@ namespace Rise.App.Views
         protected override void OnNavigatedFrom(NavigationEventArgs e)
             => _navigationHelper.OnNavigatedFrom(e);
         #endregion
+
+        private async void AddFolders_Click(object sender, RoutedEventArgs e)
+        {
+            ContentDialog dialog = new ContentDialog();
+            dialog.Title = "Manage local media folders";
+            dialog.CloseButtonText = "Close";
+            dialog.Content = new Settings.MediaSourcesPage();
+            var result = await dialog.ShowAsync();
+        }
     }
 }

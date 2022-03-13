@@ -1,27 +1,29 @@
-﻿using Rise.Models;
-using Rise.App.Common;
+﻿using Rise.Common;
+using Rise.Common.Interfaces;
+using Rise.Data.ViewModels;
+using Rise.Models;
+using Rise.Repository.SQL;
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Web;
-using Windows.Data.Xml.Dom;
 
 namespace Rise.App.ViewModels
 {
     public class ArtistViewModel : ViewModel<Artist>
     {
-        // private readonly DispatcherQueue dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+        private ISQLRepository<Artist> Repository => SQLRepository.Repository.Artists;
 
+        #region Constructor
         /// <summary>
         /// Initializes a new instance of the ArtistViewModel class that wraps an Artist object.
         /// </summary>
         public ArtistViewModel(Artist model = null)
         {
             Model = model ?? new Artist();
-            IsNew = true;
         }
+        #endregion
 
+        #region Properties
         /// <summary>
         /// Gets or sets the artist name.
         /// </summary>
@@ -41,8 +43,7 @@ namespace Rise.App.ViewModels
                 if (value != Model.Name)
                 {
                     Model.Name = value;
-                    IsModified = true;
-                    OnPropertyChanged(nameof(Name));
+                    OnPropertyChanged();
                 }
             }
         }
@@ -58,81 +59,9 @@ namespace Rise.App.ViewModels
                 if (value != Model.Picture)
                 {
                     Model.Picture = value;
-                    IsModified = true;
-                    OnPropertyChanged(nameof(Picture));
+                    OnPropertyChanged();
                 }
             }
-        }
-
-        public async Task<string> GetPictureAsync()
-        {
-            string name = HttpUtility.UrlEncode(Name);
-            string xml;
-
-            try
-            {
-                xml = await WebHelpers.
-                    CreateGETRequestAsync(URLs.MusicBrainz + "artist/?query=artist:" + name);
-            }
-            catch
-            {
-                return Resources.MusicThumb;
-            }
-
-            if (xml == null)
-            {
-                return Resources.MusicThumb;
-            }
-
-            XmlDocument doc = new XmlDocument();
-            doc.LoadXml(xml);
-
-            XmlNodeList nodes = doc.GetElementsByTagName("artist");
-
-            string id = "";
-            foreach (IXmlNode node in nodes)
-            {
-                XmlNamedNodeMap attrs = node.Attributes;
-                IXmlNode idAttr = attrs.GetNamedItem("id");
-
-                if (idAttr != null)
-                {
-                    id = idAttr.InnerText;
-                    break;
-                }
-            }
-
-            if (id != "")
-            {
-                xml = await WebHelpers.
-                    CreateGETRequestAsync(URLs.MusicBrainz + "artist/" + id + "?inc=url-rels");
-
-                doc.LoadXml(xml);
-
-                nodes = doc.GetElementsByTagName("relation");
-
-                string img;
-                foreach (IXmlNode node in nodes)
-                {
-                    XmlNamedNodeMap attrs = node.Attributes;
-                    IXmlNode type = attrs.GetNamedItem("type");
-
-                    if (type.InnerText == "image")
-                    {
-                        img = node.FirstChild.InnerText;
-
-                        string path = await WebHelpers.SaveImageFromURLAsync(img, $@"{name}.png");
-                        Debug.WriteLine(path);
-
-                        if (path != "/")
-                        {
-                            return $@"ms-appdata:///local/{path}.png";
-                        }
-                    }
-                }
-            }
-
-            return Resources.MusicThumb;
         }
 
         /// <summary>
@@ -148,53 +77,40 @@ namespace Rise.App.ViewModels
         public string Albums => AlbumCount.ToString() + " " + ResourceLoaders.MediaDataLoader.GetString("Albums");
 
         /// <summary>
-        /// Gets or sets a value that indicates whether the underlying model has been modified. 
+        /// Combination of artist's song count and album count.
         /// </summary>
-        /// <remarks>
-        /// Used to reduce load and only upsert the models that have changed.
-        /// </remarks>
-        public bool IsModified { get; set; }
+        public string SongsNAlbums => Albums + ", " + Songs;
+        #endregion
 
-        private bool _isNew;
+        #region Backend
         /// <summary>
-        /// Gets or sets a value that indicates whether this is a new item.
-        /// </summary>
-        public bool IsNew
-        {
-            get => _isNew;
-            set => Set(ref _isNew, value);
-        }
-
-        private bool _isInEdit = false;
-        /// <summary>
-        /// Gets or sets a value that indicates whether the artist data is being edited.
-        /// </summary>
-        public bool IsInEdit
-        {
-            get => _isInEdit;
-            set => Set(ref _isInEdit, value);
-        }
-
-        /// <summary>
-        /// Saves artist data that has been edited.
+        /// Saves item data to the backend.
         /// </summary>
         public async Task SaveAsync()
         {
-            IsInEdit = false;
-            IsModified = false;
-
-            if (IsNew)
+            bool hasMatch = await Repository.CheckForMatchAsync(Model);
+            if (!hasMatch)
             {
-                IsNew = false;
                 App.MViewModel.Artists.Add(this);
+                await Repository.QueueUpsertAsync(Model);
             }
-
-            Picture = Resources.MusicThumb;
-            await App.Repository.Artists.QueueUpsertAsync(Model);
+            else
+            {
+                await Repository.UpdateAsync(Model);
+            }
         }
 
         /// <summary>
-        /// Checks whether or not the artist is available. If it's not,
+        /// Deletes item data from the backend.
+        /// </summary>
+        public async Task DeleteAsync()
+        {
+            App.MViewModel.Artists.Remove(this);
+            await Repository.QueueDeletionAsync(Model);
+        }
+
+        /// <summary>
+        /// Checks whether or not the item is available. If it's not,
         /// delete it.
         /// </summary>
         public async Task CheckAvailabilityAsync()
@@ -205,62 +121,25 @@ namespace Rise.App.ViewModels
                 return;
             }
         }
+        #endregion
 
+        #region Editing
         /// <summary>
-        /// Delete artist from repository and MViewModel.
+        /// Enables edit mode.
         /// </summary>
-        public async Task DeleteAsync()
+        /*public async Task StartEditAsync()
         {
-            IsModified = true;
-
-            App.MViewModel.Artists.Remove(this);
-            await App.Repository.Artists.QueueDeletionAsync(Model);
-        }
-
-        /// <summary>
-        /// Raised when the user cancels the changes they've made to the artist data.
-        /// </summary>
-        public event EventHandler AddNewArtistCanceled;
-
-        /// <summary>
-        /// Cancels any in progress edits.
-        /// </summary>
-        public async Task CancelEditsAsync()
-        {
-            if (IsNew)
-            {
-                AddNewArtistCanceled?.Invoke(this, EventArgs.Empty);
-            }
-            else
-            {
-                await RevertChangesAsync();
-            }
-        }
+            _ = await typeof(PropertiesPage).
+                PlaceInWindowAsync(ApplicationViewMode.Default, 380, 550, true, props);
+        }*/
 
         /// <summary>
         /// Discards any edits that have been made, restoring the original values.
         /// </summary>
-        public async Task RevertChangesAsync()
+        public async Task CancelEditsAsync()
         {
-            IsInEdit = false;
-            if (IsModified)
-            {
-                await RefreshArtistsAsync();
-                IsModified = false;
-            }
+            Model = await Repository.GetAsync(Model.Id);
         }
-
-        /// <summary>
-        /// Enables edit mode.
-        /// </summary>
-        public void StartEdit() => IsInEdit = true;
-
-        /// <summary>
-        /// Reloads all of the artist data.
-        /// </summary>
-        public async Task RefreshArtistsAsync()
-        {
-            Model = await App.Repository.Artists.GetAsync(Model.Id);
-        }
+        #endregion
     }
 }

@@ -1,19 +1,24 @@
-using Microsoft.EntityFrameworkCore;
+using Microsoft.QueryStringDotNET;
+using Microsoft.Toolkit.Uwp.Notifications;
 using Rise.App.ChangeTrackers;
-using Rise.App.Common;
-using Rise.App.Indexing;
+using Rise.App.DbControllers;
 using Rise.App.ViewModels;
 using Rise.App.Views;
-using Rise.Repository;
-using Rise.Repository.SQL;
+using Rise.Common;
+using Rise.Common.Extensions;
+using Rise.Common.Helpers;
+using Rise.Data.Sources;
+using Rise.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Threading.Tasks;
+using System.Timers;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
+using Windows.Storage.AccessCache;
+using Windows.UI.Notifications;
 using Windows.UI.WindowManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -27,6 +32,44 @@ namespace Rise.App
     public sealed partial class App : Application
     {
         #region Variables
+        public static bool IsLoaded = false;
+
+        private static TimeSpan _indexingInterval = TimeSpan.FromMinutes(5);
+
+        public static TimeSpan IndexingInterval
+        {
+            get
+            {
+                return _indexingInterval;
+            }
+            set
+            {
+                if (value != _indexingInterval)
+                {
+                    _indexingInterval = value;
+                }
+                IndexingTimer = new(value.TotalMilliseconds)
+                {
+                    AutoReset = true
+                };
+            }
+        }
+
+        public static Timer IndexingTimer = new(IndexingInterval.TotalMilliseconds)
+        {
+            AutoReset = true
+        };
+
+        /// <summary>
+        /// Gets the app-wide <see cref="PlaylistsBackendController"/> singleton instance.
+        /// </summary>
+        public static PlaylistsBackendController PBackendController { get; private set; }
+
+        /// <summary>
+        /// Gets the app-wide <see cref="NotificationsBackendController"/> singleton instance.
+        /// </summary>
+        public static NotificationsBackendController NBackendController { get; private set; }
+
         /// <summary>
         /// Gets the app-wide <see cref="MainViewModel"/> singleton instance.
         /// </summary>
@@ -43,14 +86,14 @@ namespace Rise.App
         public static SettingsViewModel SViewModel { get; private set; }
 
         /// <summary>
-        /// Gets the app-wide <see cref="SidebarViewModel"/> singleton instance.
+        /// Gets the app-wide <see cref="NavViewDataSource"/> singleton instance.
         /// </summary>
-        public static SidebarViewModel SBViewModel { get; private set; }
+        public static NavViewDataSource NavDataSource { get; private set; }
 
         /// <summary>
-        /// Pipeline for interacting with backend service or database.
+        /// Gets the app-wide <see cref="LastFMViewModel"/> singleton instance.
         /// </summary>
-        public static IRepository Repository { get; private set; }
+        public static LastFMViewModel LMViewModel { get; private set; }
 
         /// <summary>
         /// Gets the music library.
@@ -74,9 +117,6 @@ namespace Rise.App
 
         private static List<StorageLibraryChange> Changes { get; set; }
             = new List<StorageLibraryChange>();
-
-        public static IndexingHelper Indexer { get; private set; }
-            = new IndexingHelper();
         #endregion
 
         /// <summary>
@@ -85,7 +125,7 @@ namespace Rise.App
         /// </summary>
         public App()
         {
-            SViewModel = new SettingsViewModel();
+            SViewModel = new();
             switch (SViewModel.Theme)
             {
                 case 0:
@@ -99,28 +139,98 @@ namespace Rise.App
 
             InitializeComponent();
             Suspending += OnSuspending;
+            UnhandledException += App_UnhandledException;
+        }
+
+        private async void App_UnhandledException(object sender, Windows.UI.Xaml.UnhandledExceptionEventArgs e)
+        {
+            ToastContent content = new ToastContentBuilder()
+                .AddToastActivationInfo(new QueryString()
+                {
+                     { "stackTrace", e.Exception.StackTrace },
+                     { "message", e.Exception.Message },
+                     { "exceptionName", e.Exception.GetType().ToString() },
+                     { "source", e.Exception.Source },
+                     { "hresult", $"{e.Exception.HResult}" }
+                }.ToString(), ToastActivationType.Foreground)
+                .AddText("An error occured!")
+                .AddText("Unfortunately, Rise Media Player crashed. Click to view stack trace.")
+                .GetToastContent();
+
+            string text = $"The exception {e.Exception.GetType()} happened last time the app was launched.\n\nStack trace:\n{e.Exception.Message}\n{e.Exception.StackTrace}\nSource: {e.Exception.Source}\nHResult: {e.Exception.HResult}";
+            await NBackendController.AddNotificationAsync("Rise Media Player unexpectedly crashed.", "Here are some information on what happened:\n\n" + text + "\n\nYou could go to https://github.com/Rise-Software/Rise-Media-Player/issues to report this issue.", "");
+
+            ToastNotification notification = new(content.GetXml());
+            ToastNotificationManager.CreateToastNotifier().Show(notification);
+        }
+
+        protected async override void OnActivated(IActivatedEventArgs e)
+        {
+            switch (e.Kind)
+            {
+                case ActivationKind.StartupTask:
+                    {
+                        Frame rootFrame = await
+                            InitializeWindowAsync(e.PreviousExecutionState);
+
+                        if (rootFrame.Content == null)
+                        {
+                            _ = !SViewModel.SetupCompleted
+                                ? rootFrame.Navigate(typeof(SetupPage))
+                                : rootFrame.Navigate(typeof(MainPage));
+                        }
+
+                        Window.Current.Activate();
+                        break;
+                    }
+
+                case ActivationKind.ToastNotification:
+                    {
+                        if (e is ToastNotificationActivatedEventArgs toastActivationArgs)
+                        {
+                            QueryString args = QueryString.Parse(toastActivationArgs.Argument);
+
+                            string text = $"The exception {args["exceptionName"]} happened last time the app was launched.\n\nStack trace:\n{args["message"]}\n{args["stackTrace"]}\nSource: {args["source"]}\nHResult: {args["hresult"]}";
+
+                            Frame rootFrame = await
+                                InitializeWindowAsync(e.PreviousExecutionState);
+
+                            if (rootFrame.Content == null)
+                            {
+                                _ = !SViewModel.SetupCompleted
+                                    ? rootFrame.Navigate(typeof(SetupPage))
+                                    : rootFrame.Navigate(typeof(MainPage));
+                            }
+
+                            Window.Current.Activate();
+                            _ = typeof(CrashDetailsPage).PlaceInWindowAsync(Windows.UI.ViewManagement.ApplicationViewMode.Default, 600, 600, true, text);
+                        }
+                        break;
+                    }
+            }
         }
 
         /// <summary>
-        /// Initializes the app's database and ViewModels.
+        /// Initializes the app's ViewModels.
         /// </summary>
-        private async Task InitDatabase()
+        private async Task InitDataSourcesAsync()
         {
+            // We still have to make sure the file's there
             _ = await ApplicationData.Current.LocalCacheFolder.CreateFileAsync("Files.db", CreationCollisionOption.OpenIfExists);
-            string dbPath = Path.Combine(ApplicationData.Current.LocalCacheFolder.Path, "Files.db");
-            DbContextOptionsBuilder<Context> dbOptions = new DbContextOptionsBuilder<Context>().UseSqlite(
-                "Data Source=" + dbPath);
-
-            Repository = new SQLRepository(dbOptions);
 
             MusicLibrary = await StorageLibrary.GetLibraryAsync(KnownLibraryId.Music);
             VideoLibrary = await StorageLibrary.GetLibraryAsync(KnownLibraryId.Videos);
 
+            PBackendController = new PlaylistsBackendController();
+            NBackendController = new NotificationsBackendController();
+
             MViewModel = new MainViewModel();
+            LMViewModel = new LastFMViewModel();
             PViewModel = new PlaybackViewModel();
-            SBViewModel = new SidebarViewModel();
+            NavDataSource = new NavViewDataSource();
 
             MusicLibrary.DefinitionChanged += MusicLibrary_DefinitionChanged;
+            VideoLibrary.DefinitionChanged += MusicLibrary_DefinitionChanged;
         }
 
         private async void MusicLibrary_DefinitionChanged(StorageLibrary sender, object args)
@@ -136,7 +246,7 @@ namespace Rise.App
         /// <param name="e">Details about the launch request and process.</param>
         protected override async void OnLaunched(LaunchActivatedEventArgs e)
         {
-            Frame rootFrame = await InitializeWindowAsync(e);
+            Frame rootFrame = await InitializeWindowAsync(e.PreviousExecutionState);
             if (e.PrelaunchActivated == false)
             {
                 if (rootFrame.Content == null)
@@ -173,23 +283,30 @@ namespace Rise.App
         /// <param name="e">Details about the suspend request.</param>
         private async void OnSuspending(object sender, SuspendingEventArgs e)
         {
-            SuspendingDeferral deferral = e.SuspendingOperation.GetDeferral();
-            await SBViewModel.SerializeItemsAsync();
+            SuspendingDeferral deferral = null;
             try
             {
+                deferral = e?.SuspendingOperation?.GetDeferral();
+
+                if (NavDataSource != null)
+                {
+                    await NavDataSource.SerializeGroupsAsync();
+                }
+
                 await SuspensionManager.SaveAsync();
             }
             catch (SuspensionManagerException)
             {
-
             }
-
-            deferral.Complete();
+            finally
+            {
+                deferral?.Complete();
+            }
         }
 
         protected override async void OnFileActivated(FileActivatedEventArgs args)
         {
-            Frame rootFrame = await InitializeWindowAsync(args);
+            Frame rootFrame = await InitializeWindowAsync(args.PreviousExecutionState);
             if (rootFrame.Content == null)
             {
                 // When the navigation stack isn't restored navigate to the first page,
@@ -206,33 +323,36 @@ namespace Rise.App
             _ = await typeof(NowPlaying).
                 PlaceInWindowAsync(AppWindowPresentationKind.Default, 320, 300);
 
-            await PViewModel.StartMusicPlaybackAsync(args.Files.GetEnumerator(), 0, args.Files.Count);
+            StorageApplicationPermissions.FutureAccessList.Add(args.Files[0] as StorageFile);
+            try
+            {
+                var song = await Song.GetFromFileAsync(args.Files[0] as StorageFile);
+                await PViewModel.PlaySongAsync(new SongViewModel(song));
+            }
+            catch (Exception)
+            {
+
+            }
+            StorageApplicationPermissions.FutureAccessList.Clear();
         }
 
         /// <summary>
         /// Initializes the main app window.
         /// </summary>
-        /// <param name="args">Event args, must be of type
-        /// <see cref="FileActivatedEventArgs"/> or <see cref="LaunchActivatedEventArgs"/>.</param>
+        /// <param name="previousState">Previous app execution state.</param>
         /// <returns>The app window's root frame.</returns>
-        private async Task<Frame> InitializeWindowAsync(dynamic args)
+        private async Task<Frame> InitializeWindowAsync(ApplicationExecutionState previousState)
         {
-#if DEBUG
-            if (Debugger.IsAttached)
-            {
-                // DebugSettings.EnableFrameRateCounter = true;
-            }
-#endif
-
             // Do not repeat app initialization when the Window already has content,
             // just ensure that the window is active
-            if (!(Window.Current.Content is Frame rootFrame))
+            if (Window.Current.Content is not Frame rootFrame)
             {
-                await InitDatabase();
+                await InitDataSourcesAsync();
                 await MViewModel.GetListsAsync();
 
-                LeavingBackground += async (s, e) =>
-                    await MViewModel.StartFullCrawlAsync();
+                StartIndexingTimer();
+
+                // LeavingBackground += async (s, e) => await MViewModel.StartFullCrawlAsync();
 
                 // Create a Frame to act as the navigation context and navigate to the first page
                 rootFrame = new Frame();
@@ -242,8 +362,8 @@ namespace Rise.App
                 // Associate the frame with a SuspensionManager key.
                 SuspensionManager.RegisterFrame(rootFrame, "AppFrame");
 
-                if ((args.PreviousExecutionState == ApplicationExecutionState.Terminated) ||
-                    (args.PreviousExecutionState == ApplicationExecutionState.ClosedByUser &&
+                if ((previousState == ApplicationExecutionState.Terminated) ||
+                    (previousState == ApplicationExecutionState.ClosedByUser &&
                     SViewModel.PickUp))
                 {
                     // Restore the saved session state only when appropriate.
@@ -258,12 +378,16 @@ namespace Rise.App
                     }
                 }
 
-                _ = await KnownFolders.MusicLibrary.
-                    TrackForegroundAsync(QueryPresets.SongQueryOptions,
-                    SongsTracker.MusicQueryResultChanged);
-                _ = await KnownFolders.VideosLibrary.
-                    TrackForegroundAsync(QueryPresets.VideoQueryOptions,
-                    SongsTracker.MusicQueryResultChanged);
+                if (SViewModel.AutoIndexingEnabled)
+                {
+                    _ = await KnownFolders.MusicLibrary.
+                        TrackForegroundAsync(QueryPresets.SongQueryOptions,
+                        SongsTracker.MusicQueryResultChanged);
+
+                    _ = await KnownFolders.VideosLibrary.
+                        TrackForegroundAsync(QueryPresets.VideoQueryOptions,
+                        VideosTracker.VideosLibrary_ContentsChanged);
+                }
 
                 // await MViewModel.StartFullCrawlAsync();
 
@@ -271,7 +395,61 @@ namespace Rise.App
                 Window.Current.Content = rootFrame;
             }
 
+            IsLoaded = true;
+
             return rootFrame;
+        }
+
+        public static void StartIndexingTimer()
+        {
+            if (SViewModel.AutoIndexingEnabled)
+            {
+                if (!IndexingTimer.Enabled)
+                {
+                    switch (SViewModel.IndexingMode)
+                    {
+                        case -1:
+                            return;
+                        case 0:
+                            IndexingInterval = TimeSpan.FromMinutes(1);
+                            break;
+                        case 1:
+                            IndexingInterval = TimeSpan.FromMinutes(5);
+                            break;
+                        case 2:
+                            IndexingInterval = TimeSpan.FromMinutes(10);
+                            break;
+                        case 3:
+                            IndexingInterval = TimeSpan.FromMinutes(30);
+                            break;
+                        case 4:
+                            IndexingInterval = TimeSpan.FromHours(1);
+                            break;
+                    }
+
+                    IndexingTimer.Start();
+                    IndexingTimer.Elapsed += IndexingTimer_Elapsed;
+                }
+                else
+                {
+                    IndexingTimer.Elapsed -= IndexingTimer_Elapsed;
+                    IndexingTimer.Stop();
+
+                    StartIndexingTimer();
+                }
+            }
+        }
+
+        private static async void IndexingTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            try
+            {
+                await MViewModel.StartFullCrawlAsync();
+            }
+            catch (Exception)
+            {
+                Debug.WriteLine("An error occured while indexing.");
+            }
         }
     }
 }

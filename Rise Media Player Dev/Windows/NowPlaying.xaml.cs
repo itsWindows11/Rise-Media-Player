@@ -1,6 +1,4 @@
 using Rise.App.ViewModels;
-using Windows.UI;
-using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -20,9 +18,7 @@ namespace Rise.App.Views
             InitializeComponent();
             NavigationCacheMode = NavigationCacheMode.Required;
 
-            Player.SetMediaPlayer(ViewModel.Player);
-            ApplicationView.GetForCurrentView().TitleBar.ButtonBackgroundColor = Colors.Transparent;
-            ApplicationView.GetForCurrentView().TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+            //Player.SetMediaPlayer(ViewModel.Player);
 
             DataContext = ViewModel;
             _ = PlayFrame.Navigate(typeof(CurrentlyPlayingPage));
@@ -32,23 +28,28 @@ namespace Rise.App.Views
         {
             if (IsInCurrentlyPlayingPage)
             {
-                PlayFrameHoverAnimationIn.Begin();
-                BlurBrushBorderAnimationIn.Begin();
-                PlayerElementHoverAnimationIn.Begin();
+                PlayingAnimationIn.Begin();
                 PlayFrame.Visibility = Visibility.Visible;
                 Player.Visibility = Visibility.Visible;
-                ImageBrushAlbumCover.Opacity = 0.25;
+                if (Application.Current.RequestedTheme == ApplicationTheme.Dark)
+                {
+                    ImageBrushAlbumCover.Opacity = 0.25;
+                }
+                else
+                {
+                    ImageBrushAlbumCover.Opacity = 0.5;
+                }
+
                 BlurBrush.Amount = 10;
             }
+            MainPage.Current.AppTitleBar.Visibility = Visibility.Collapsed;
         }
 
         private void Page_PointerExited(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
         {
             if (IsInCurrentlyPlayingPage)
             {
-                PlayFrameHoverAnimationOut.Begin();
-                BlurBrushBorderAnimationOut.Begin();
-                PlayerElementHoverAnimationOut.Begin();
+                PlayingAnimationOut.Begin();
                 PlayFrame.Visibility = Visibility.Collapsed;
                 Player.Visibility = Visibility.Collapsed;
                 ImageBrushAlbumCover.Opacity = 1;
@@ -57,6 +58,14 @@ namespace Rise.App.Views
         }
 
         private void PlayFrame_Navigated(object sender, NavigationEventArgs e)
-            => IsInCurrentlyPlayingPage = !IsInCurrentlyPlayingPage;
+        {
+            IsInCurrentlyPlayingPage = !IsInCurrentlyPlayingPage;
+            BackForPlay.Visibility = IsInCurrentlyPlayingPage ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void Page_PointerMoved(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            MainPage.Current.AppTitleBar.Visibility = Visibility.Collapsed;
+        }
     }
 }

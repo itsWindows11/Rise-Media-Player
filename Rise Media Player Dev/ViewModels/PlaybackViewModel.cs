@@ -1,4 +1,6 @@
-﻿using Rise.App.Common;
+﻿using Rise.Common.Interfaces;
+using Rise.Data.ViewModels;
+using Rise.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -56,7 +58,18 @@ namespace Rise.App.ViewModels
             set => Set(ref _currentVideo, value);
         }
 
-        public readonly MediaPlayer Player = new MediaPlayer();
+        private PlaybackMetaViewModel _currentPlaybackItem = new();
+
+        /// <summary>
+        /// Gets the media that's currently playing.
+        /// </summary>
+        public PlaybackMetaViewModel CurrentPlaybackItem
+        {
+            get => _currentPlaybackItem;
+            set => Set(ref _currentPlaybackItem, value);
+        }
+
+        public readonly MediaPlayer Player = new();
 
         public MediaPlaybackList PlaybackList { get; set; }
             = new MediaPlaybackList();
@@ -68,6 +81,8 @@ namespace Rise.App.ViewModels
 
         public bool CanContinue { get; set; }
             = true;
+
+        public event EventHandler CurrentMediaChanged, CurrentSongChanged, CurrentVideoChanged;
         #endregion
 
         private void ClearLists()
@@ -88,8 +103,45 @@ namespace Rise.App.ViewModels
             PlaybackList.ShuffleEnabled = false;
 
             PlaybackList.Items.Add(await song.AsPlaybackItemAsync());
-            SetCurrentSong(0);
+
+            CurrentSong = song;
+
             Player.Play();
+
+            if (App.SViewModel.Color == -3)
+            {
+                App.SViewModel.Color = -1;
+                App.SViewModel.Color = -3;
+            }
+
+            CurrentMediaChanged?.Invoke(this, EventArgs.Empty);
+            CurrentSongChanged?.Invoke(this, EventArgs.Empty);
+            await CurrentPlaybackItem.NotifyChangesAsync(false);
+        }
+
+        public async Task PlaySongFromUrlAsync(SongViewModel song)
+        {
+            CancelTask();
+
+            ClearLists();
+            PlaybackList.ShuffleEnabled = false;
+
+            PlaybackList.Items.Add(song.AsPlaybackItem(new Uri(song.Location)));
+
+            CurrentSong = song;
+
+            Player.Play();
+
+            if (App.SViewModel.Color == -3)
+            {
+                App.SViewModel.Color = -1;
+                App.SViewModel.Color = -3;
+            }
+
+            CurrentMediaChanged?.Invoke(this, EventArgs.Empty);
+            CurrentSongChanged?.Invoke(this, EventArgs.Empty);
+
+            await CurrentPlaybackItem.NotifyChangesAsync(false);
         }
 
         public async Task PlayVideoAsync(VideoViewModel video)
@@ -100,8 +152,32 @@ namespace Rise.App.ViewModels
             PlaybackList.ShuffleEnabled = false;
 
             PlaybackList.Items.Add(await video.AsPlaybackItemAsync());
-            SetCurrentVideo(0);
+
+            CurrentVideo = video;
+
             Player.Play();
+
+            CurrentMediaChanged?.Invoke(this, EventArgs.Empty);
+            CurrentVideoChanged?.Invoke(this, EventArgs.Empty);
+            await CurrentPlaybackItem.NotifyChangesAsync(true);
+        }
+
+        public async Task PlayVideoFromUrlAsync(VideoViewModel video)
+        {
+            CancelTask();
+
+            ClearLists();
+            PlaybackList.ShuffleEnabled = false;
+
+            PlaybackList.Items.Add(video.AsPlaybackItem(new Uri(video.Location)));
+
+            CurrentVideo = video;
+
+            Player.Play();
+
+            CurrentMediaChanged?.Invoke(this, EventArgs.Empty);
+            CurrentVideoChanged?.Invoke(this, EventArgs.Empty);
+            await CurrentPlaybackItem.NotifyChangesAsync(true);
         }
 
         public async Task StartVideoPlaybackAsync(IEnumerator<VideoViewModel> videos, int startIndex, int count, bool shuffle = false)
@@ -120,16 +196,24 @@ namespace Rise.App.ViewModels
             await CreatePlaybackListAsync(startIndex, count, songs, Token);
         }
 
+        public async Task StartMusicPlaybackFromUrlAsync(IEnumerator<SongViewModel> songs, int startIndex, int count, bool shuffle = false)
+        {
+            CancelTask();
+            PlaybackList.ShuffleEnabled = shuffle;
+
+            await CreatePlaybackListAsync(startIndex, count, songs, Token);
+        }
+
         public async Task StartMusicPlaybackAsync(IEnumerator<IStorageItem> songs, int startIndex, int count)
         {
             CancelTask();
             PlaybackList.ShuffleEnabled = false;
 
-            List<SongViewModel> list = new List<SongViewModel>();
+            List<SongViewModel> list = new();
             while (songs.MoveNext())
             {
-                list.Add(new SongViewModel
-                    (await (songs.Current as StorageFile).AsSongModelAsync()));
+                var song = await Song.GetFromFileAsync(songs.Current as StorageFile);
+                list.Add(new SongViewModel(song));
             }
 
             songs.Dispose();
@@ -160,6 +244,15 @@ namespace Rise.App.ViewModels
 
             // Add initial item to avoid delays when starting playback
             SongViewModel song = songs.Current;
+
+            // Make sure the song instance isn't null in case there are no songs
+            if (song == null)
+            {
+                songs.Dispose();
+                CanContinue = true;
+                return;
+            }
+
             var item = await song.AsPlaybackItemAsync();
 
             PlaybackList.Items.Add(item);
@@ -262,25 +355,41 @@ namespace Rise.App.ViewModels
             CanContinue = true;
         }
 
-        public void SetCurrentSong(uint index)
+        public void SetCurrentSong(int index)
         {
             if (index >= 0 && index < PlayingSongs.Count)
             {
-                CurrentSong = PlayingSongs[(int)index];
-            }
+                CurrentVideo = null;
+                CurrentSong = PlayingSongs[index];
 
-            if (App.SViewModel.Color == -3)
-            {
-                App.SViewModel.Color = -1;
-                App.SViewModel.Color = -3;
+                if (App.SViewModel.Color == -3)
+                {
+                    App.SViewModel.Color = -1;
+                    App.SViewModel.Color = -3;
+                }
+
+                CurrentMediaChanged?.Invoke(this, EventArgs.Empty);
+                CurrentSongChanged?.Invoke(this, EventArgs.Empty);
+                CurrentPlaybackItem.NotifyChanges(false);
             }
         }
 
-        public void SetCurrentVideo(uint index)
+        public void SetCurrentVideo(int index)
         {
             if (index >= 0 && index < PlayingVideos.Count)
             {
-                CurrentVideo = PlayingVideos[(int)index];
+                CurrentSong = null;
+                CurrentVideo = PlayingVideos[index];
+
+                if (App.SViewModel.Color == -3)
+                {
+                    App.SViewModel.Color = -1;
+                    App.SViewModel.Color = -3;
+                }
+
+                CurrentMediaChanged?.Invoke(this, EventArgs.Empty);
+                CurrentVideoChanged?.Invoke(this, EventArgs.Empty);
+                CurrentPlaybackItem.NotifyChanges(true);
             }
         }
 
@@ -302,11 +411,11 @@ namespace Rise.App.ViewModels
             {
                 if (sender.CurrentItem.GetDisplayProperties().Type == MediaPlaybackType.Music)
                 {
-                    SetCurrentSong(sender.CurrentItemIndex);
+                    SetCurrentSong((int)sender.CurrentItemIndex);
                 }
                 else
                 {
-                    SetCurrentVideo(sender.CurrentItemIndex);
+                    SetCurrentVideo((int)sender.CurrentItemIndex);
                 }
             }
         }

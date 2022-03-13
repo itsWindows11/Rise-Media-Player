@@ -1,7 +1,9 @@
 ﻿using Microsoft.UI.Xaml.Controls;
-using Rise.App.Common;
 using Rise.App.Dialogs;
 using Rise.App.ViewModels;
+using Rise.Common;
+using Rise.Common.Constants;
+using Rise.Common.Extensions;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Windows.UI.Xaml;
@@ -22,18 +24,20 @@ namespace Rise.App.Settings
         private IEnumerable<ToggleButton> Toggles { get; set; }
 
         private readonly ObservableCollection<FontIcon> FontIcons =
-            new ObservableCollection<FontIcon>();
+            new();
 
         private readonly ObservableCollection<ImageIcon> ImageIcons =
-            new ObservableCollection<ImageIcon>();
+            new();
 
         private double Breakpoint { get; set; }
         #endregion
 
+        internal static SettingsPage Current;
         public SettingsPage()
         {
             InitializeComponent();
             Toggles = ItemGrid.GetChildren<ToggleButton>();
+            Current = this;
 
             foreach (ToggleButton toggle in Toggles)
             {
@@ -86,6 +90,9 @@ namespace Rise.App.Settings
                 }
             }
         }
+
+        private async void Support_Click(object sender, RoutedEventArgs e)
+            => _ = await URLs.Support.LaunchAsync();
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
             => SettingsDialogContainer.Current.Hide();
@@ -149,12 +156,14 @@ namespace Rise.App.Settings
             switch (tag)
             {
                 case "Langs":
-                    SettingsFrame.Navigate(typeof(LanguagePage));
+                    _ = SettingsFrame.Navigate(typeof(LanguagePage));
                     break;
 
                 case "Ins":
-                    SettingsFrame.Navigate(typeof(InsiderPage));
+                    _ = SettingsFrame.Navigate(typeof(InsiderPage));
                     Breadcrumbs.Add(ResourceLoaders.SidebarLoader.GetString("Abt"));
+                    break;
+                default:
                     break;
             }
 

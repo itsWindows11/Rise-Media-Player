@@ -1,7 +1,10 @@
-﻿using Rise.App.Common;
+﻿using Rise.App.Settings;
+using Rise.Common.Constants;
+using Rise.Common.Extensions;
+using Rise.Common.Helpers;
+using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
-using static Rise.App.Common.Enums;
 
 namespace Rise.App.Views
 {
@@ -42,8 +45,15 @@ namespace Rise.App.Views
             DiscyAboutTip.IsOpen = true;
         }
 
-        private async void LearnMoreButton_Click(object sender, Windows.UI.Xaml.RoutedEventArgs e) => await URLs.Readme.LaunchAsync();
+        private async void LearnMoreButton_Click(object sender, RoutedEventArgs e)
+            => await URLs.Readme.LaunchAsync();
 
-        private async void AppSettingsHyperlink_Click(Windows.UI.Xaml.Documents.Hyperlink sender, Windows.UI.Xaml.Documents.HyperlinkClickEventArgs args) => _ = await MainPage.Current.SDialog.ShowAsync(ExistingDialogOptions.CloseExisting);
+        private void AppSettingsHyperlink_Click(Windows.UI.Xaml.Documents.Hyperlink sender, Windows.UI.Xaml.Documents.HyperlinkClickEventArgs args)
+        {
+            if (Window.Current.Content is Frame rootFrame)
+            {
+                _ = rootFrame.Navigate(typeof(AllSettingsPage));
+            }
+        }
     }
 }

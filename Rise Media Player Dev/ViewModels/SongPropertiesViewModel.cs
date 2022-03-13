@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Rise.Common.Constants;
+using Rise.Data.ViewModels;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -72,7 +74,11 @@ namespace Rise.App.ViewModels
             set => Model.Rating = value * 20;
         }
 
-        public string Thumbnail => Model.Thumbnail;
+        public string Thumbnail
+        {
+            get => Model.Thumbnail;
+            set => Model.Thumbnail = value;
+        }
 
         public string Location => Model.Location;
 
@@ -107,7 +113,7 @@ namespace Rise.App.ViewModels
 
             if (songFile != null)
             {
-                // Get song properties.
+                // Get WinRT music properties
                 var musicProps = await songFile.Properties.GetMusicPropertiesAsync();
 
                 musicProps.Title = Title;
@@ -117,35 +123,34 @@ namespace Rise.App.ViewModels
                 musicProps.AlbumArtist = AlbumArtist;
                 musicProps.Year = Year;
                 musicProps.Rating = Rating * 20;
-                
-                /*var props = await songFile.Properties.RetrievePropertiesAsync(Properties.ViewModelProperties);
 
-                // Apply properties.
-                props["System.Title"] = Title;
-                props[SystemMusic.Artist] = Artist;
-                props[SystemMusic.TrackNumber] = Track;
-                props[SystemMusic.AlbumTitle] = Album;
-                props[SystemMusic.AlbumArtist] = AlbumArtist;
-                props["System.Media.Year"] = Year;
-                props["System.Rating"] = Rating * 20;*/
-
-                await songFile.RenameAsync(Filename, NameCollisionOption.GenerateUniqueName);
-                Model.Location = songFile.Path;
+                // We can't set MusicProperties.Genres, so
+                // we use the Win32 prop here
+                var genreProp = await songFile.Properties.
+                    RetrievePropertiesAsync(new string[] { SystemMusic.Genre });
+                genreProp[SystemMusic.Genre] = Genres.Split("; ")[0];
 
                 try
                 {
-                    // await songFile.Properties.SavePropertiesAsync(props);
                     await musicProps.SavePropertiesAsync();
+                    await songFile.Properties.SavePropertiesAsync(genreProp);
+
                     result = true;
                 }
                 catch (Exception ex)
                 {
-                    await Model.CancelEditsAsync();
                     Debug.WriteLine(ex.Message);
+
+                    await Model.CancelEditsAsync();
                     result = false;
                 }
-
-                await Model.SaveAsync();
+                finally
+                {
+                    // The rename operation will likely complete either way
+                    await songFile.RenameAsync(Filename, NameCollisionOption.GenerateUniqueName);
+                    Model.Location = songFile.Path;
+                    await Model.SaveAsync();
+                }
             }
 
             return result;
